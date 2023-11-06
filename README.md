@@ -1,6 +1,6 @@
 # @types/hyper-geojson
 
-This package is the type definition for the hyperdimensional extension of GeoJSON.
+This project is an experimental TypeScript typedef for thinking about defining hyper-dimensional GeoJSON (HyperGeoJSON).
 
 ### Cube
 
