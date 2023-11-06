@@ -1,5 +1,5 @@
 {
-  "name": "@types/super-geojson",
+  "name": "@types/hyper-geojson",
   "version": "0.0.1",
   "description": "",
   "types": "index.d.ts",

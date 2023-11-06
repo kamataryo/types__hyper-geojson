@@ -1,10 +1,10 @@
 import type GeoJSON from 'geojson'
 
-export as namespace SuperGeoJSON
+export as namespace HyperGeoJSON
 
-export type SuperGeoJsonGeometryTypes = SuperGeometry["type"];
-export type SuperGeoJsonTypes = SuperGeoJSON["type"];
-export type SuperBBox =
+export type HyperGeoJsonGeometryTypes = HyperGeometry["type"];
+export type HyperGeoJsonTypes = HyperGeoJSON["type"];
+export type HyperBBox =
   [number, number, number, number] |
   [number, number, number, number, number, number] |
   [number, number, number, number, number, number, number, number] |
@@ -16,62 +16,62 @@ export type SuperBBox =
   [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number] |
   [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
 
-export type SuperPosition = GeoJSON.Position;
+export type HyperPosition = GeoJSON.Position;
 
-export interface SuperGeoJsonObject {
-  type: SuperGeoJsonTypes,
-  bbox?: SuperBBox | undefined,
+export interface HyperGeoJsonObject {
+  type: HyperGeoJsonTypes,
+  bbox?: HyperBBox | undefined,
 }
-export type SuperGeoJSON = SuperGeometry | SuperFeature | SuperFeatureCollection
-export type SuperGeometry = GeoJSON.Geometry | Polyhedron | MultiPolyhedron | Polytope | MultiPolytope
-export type SuperGeometryObject = SuperGeometry
+export type HyperGeoJSON = HyperGeometry | HyperFeature | HyperFeatureCollection
+export type HyperGeometry = GeoJSON.Geometry | Polyhedron | MultiPolyhedron | Polytope | MultiPolytope
+export type HyperGeometryObject = HyperGeometry
 
 export interface Point extends GeoJSON.Point {
   type: 'Point' | 'Polytope0',
-  coordinates: SuperPosition,
+  coordinates: HyperPosition,
 }
 export interface MultiPoint extends GeoJSON.MultiPoint {
   type: 'MultiPoint' | 'MultiPolytope1',
-  coordinates: SuperPosition[],
+  coordinates: HyperPosition[],
 }
 export interface LineString extends GeoJSON.LineString {
   type: 'LineString' | 'Polytope1',
-  coordinates: SuperPosition[],
+  coordinates: HyperPosition[],
 }
 export interface MultiLineString extends GeoJSON.MultiLineString {
   type: 'MultiLineString' | 'MultiPolytope2',
-  coordinates: SuperPosition[][],
+  coordinates: HyperPosition[][],
 }
 export interface Polygon extends GeoJSON.Polygon {
   type: 'Polygon' | 'Polytope2',
-  coordinates: SuperPosition[][],
+  coordinates: HyperPosition[][],
 }
 export interface MultiPolygon extends GeoJSON.MultiPolygon {
   type: 'MultiPolygon' | 'MultiPolytope3',
-  coordinates: SuperPosition[][][],
+  coordinates: HyperPosition[][][],
 }
 
-export interface Polyhedron extends SuperGeoJsonObject {
+export interface Polyhedron extends HyperGeoJsonObject {
   type: 'Polyhedron' | 'Polytope3',
-  coordinates: SuperPosition[][][],
+  coordinates: HyperPosition[][][],
 }
 
-export interface MultiPolyhedron extends SuperGeoJsonObject {
+export interface MultiPolyhedron extends HyperGeoJsonObject {
   type: 'MultiPolyhedron' | 'Polytope3',
-  coordinates: SuperPosition[][][][],
+  coordinates: HyperPosition[][][][],
 }
 
-export interface Polychoron extends SuperGeoJsonObject {
+export interface Polychoron extends HyperGeoJsonObject {
   type: 'Polychoron' | 'Polytope4',
-  coordinates: SuperPosition[][][][],
+  coordinates: HyperPosition[][][][],
 }
 
-export interface MultiPolychoron extends SuperGeoJsonObject {
+export interface MultiPolychoron extends HyperGeoJsonObject {
   type: 'MultiPolychoron' | 'MultiPolytope4',
-  coordinates: SuperPosition[][][][][],
+  coordinates: HyperPosition[][][][][],
 }
 
-export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends SuperGeoJsonObject {
+export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends HyperGeoJsonObject {
   type:
     N extends 0 ? Point['type'] :
     N extends 1 ? LineString['type'] :
@@ -100,7 +100,7 @@ export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
     N extends 11 ? Polychoron['coordinates'][][][][][][][] : never,
 }
 
-export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends SuperGeoJsonObject {
+export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends HyperGeoJsonObject {
   type:
     N extends 0 ? MultiPoint['type'] :
     N extends 1 ? MultiLineString['type'] :
@@ -129,21 +129,21 @@ export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
   N extends 11 ? MultiPolychoron['coordinates'][][][][][][][] : never,
 }
 
-export interface SuperGeometryCollection<G extends SuperGeometry = SuperGeometry> extends GeoJSOnObject {
-  type: 'SuperGeometryCollection',
+export interface HyperGeometryCollection<G extends HyperGeometry = HyperGeometry> extends GeoJSOnObject {
+  type: 'HyperGeometryCollection',
   geometries: G[],
 }
 
-export type SuperGeoJsonProperties = GeoJSON.Properties
+export type HyperGeoJsonProperties = GeoJSON.Properties
 
-export interface SuperFeature<G extends SuperGeometry | null = SuperGeometry, P = SuperGeoJsonProperties> extends SuperGeoJsonObject {
-  type: 'SuperFeature',
+export interface HyperFeature<G extends HyperGeometry | null = HyperGeometry, P = HyperGeoJsonProperties> extends HyperGeoJsonObject {
+  type: 'HyperFeature',
   geometry: G,
   id?: GeoJSON.Feature['id'],
   properties: P,
 }
 
-export interface SuperFeatureCollection<G extends SuperGeometry | null = SuperGeometry, P = SuperGeoJsonProperties> extends SuperGeoJsonObject {
-  type: 'SuperFeatureCollection',
-  features: Array<SuperFeature<G, P>>
+export interface HyperFeatureCollection<G extends HyperGeometry | null = HyperGeometry, P = HyperGeoJsonProperties> extends HyperGeoJsonObject {
+  type: 'HyperFeatureCollection',
+  features: Array<HyperFeature<G, P>>
 }

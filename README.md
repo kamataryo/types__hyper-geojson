@@ -1,11 +1,11 @@
-# @types/super-geojson
+# @types/hyper-geojson
 
 This package is the type definition for the hyperdimensional extension of GeoJSON.
 
 ### Cube
 
 ```typescript
-const cube: SuperGeoJSON.Polyhedron = {
+const cube: HyperGeoJSON.Polyhedron = {
   type: 'Polyhedron',
   coordinates: [
     [[[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]]],
@@ -20,10 +20,10 @@ const cube: SuperGeoJSON.Polyhedron = {
 
 ### Tesseract
 
-![tesseract](https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Hypercubecentral.svg/2560px-Hypercubecentral.svg.png)
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Hypercubecentral.svg/2560px-Hypercubecentral.svg.png" width="300">
 
 ```typescript
-const tesseract: SuperGeoJSON.Polychoron = {
+const tesseract: HyperGeoJSON.Polychoron = {
   type: 'Polychoron',
   coordinates: [
     [
