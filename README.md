@@ -4,6 +4,8 @@ This package is the type definition for the hyperdimensional extension of GeoJSO
 
 ## Usage
 
+### Polyhedron (n = 4)
+
 ```typescript
 import type SuperGeoJSON from 'super-geojson'
 
@@ -33,6 +35,26 @@ const feature: SuperGeoJSON.SuperFeature<SuperGeoJSON.Polyhedron> = {
   properties: null,
   geometry: polyhedron,
 }
-assert.equal(feature.type, 'SuperFeature')
-assert.equal(feature.geometry.type, 'Polyhedron')
+```
+
+### Polytope5
+
+```typescript
+const polytope4_1: SuperGeoJSON.Polytope4 = {
+  type: 'Polytope4',
+  coordnates: [[[[[...], ...]]]],
+}
+const polytope4_2: SuperGeoJSON.Polytope4 = {
+  type: 'Polytope4',
+  coordnates: [[[[[...], ...]]]],
+}
+const polytope4_3: SuperGeoJSON.Polytope4 = {
+  type: 'Polytope4',
+  coordnates: [[[[[...], ...]]]],
+}
+...
+const polytope5: SuperGeoJSON.Polytope5 = {
+  type: 'Polytope5',
+  coordiates: [polytope4_1, polytope4_2, polytope4_3, ...].map(polytope => polytope.coordinates)
+}
 ```

@@ -66,3 +66,11 @@ test('can define a multi polyhedron', () => {
   assert.equal(feature.type, 'SuperFeature')
   assert.equal(feature.geometry.type, 'MultiPolyhedron')
 })
+
+test('can define hyper polytope', () => {
+  const polytope8: SuperGeoJSON.Polytope<8> = {
+    type: 'Polytope8',
+    coordinates: [[[[[[[[0, 0, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]]]]]]]]
+  }
+  assert.equal(polytope8.type, 'Polytope8')
+})
