@@ -4,11 +4,23 @@ export as namespace SuperGeoJSON
 
 export type SuperGeoJsonGeometryTypes = SuperGeometry["type"];
 export type SuperGeoJsonTypes = SuperGeoJSON["type"];
+export type SuperBBox =
+  [number, number, number, number] |
+  [number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number] |
+  [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+
 export type SuperPosition = GeoJSON.Position;
 
 export interface SuperGeoJsonObject {
   type: SuperGeoJsonTypes,
-  bbox?: GeoJSON.BBox | undefined,
+  bbox?: SuperBBox | undefined,
 }
 export type SuperGeoJSON = SuperGeometry | SuperFeature | SuperFeatureCollection
 export type SuperGeometry = GeoJSON.Geometry | Polyhedron | MultiPolyhedron | Polytope | MultiPolytope
