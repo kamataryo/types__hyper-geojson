@@ -44,23 +44,28 @@ export interface Polyhedron extends SuperGeoJsonObject {
   coordinates: SuperPosition[][][],
 }
 
+export interface MultiPolyhedron extends SuperGeoJsonObject {
+  type: 'MultiPolyhedron' | 'Polytope3',
+  coordinates: SuperPosition[][][][],
+}
+
 export interface Polychoron extends SuperGeoJsonObject {
   type: 'Polychoron' | 'Polytope4',
   coordinates: SuperPosition[][][][],
 }
 
-export interface MultiPolyhedron extends SuperGeoJsonObject {
-  type: 'MultiPolyhedron' | 'MultiPolytope3',
+export interface MultiPolychoron extends SuperGeoJsonObject {
+  type: 'MultiPolychoron' | 'MultiPolytope4',
   coordinates: SuperPosition[][][][][],
 }
 
 export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends SuperGeoJsonObject {
   type:
-    N extends 0 ? 'Point' | 'Polytope0' :
-    N extends 1 ? 'LineString' | 'Polytope1' :
-    N extends 2 ? 'Polygon' | 'Polytope2' :
-    N extends 3 ? 'Polyhedron' | 'Polytope3' :
-    N extends 4 ? 'Polychoron' | 'Polytope4' :
+    N extends 0 ? Point['type'] :
+    N extends 1 ? LineString['type'] :
+    N extends 2 ? Polygon['type'] :
+    N extends 3 ? Polyhedron['type'] :
+    N extends 4 ? Polychoron['type'] :
     N extends 5 ? 'Polytope5' :
     N extends 6 ? 'Polytope6' :
     N extends 7 ? 'Polytope7' :
@@ -69,27 +74,27 @@ export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
     N extends 10 ? 'Polytope10' :
     N extends 11 ? 'Polytope11' : never,
   coordinates:
-    N extends 0 ? SuperPosition :
-    N extends 1 ? SuperPosition[] :
-    N extends 2 ? SuperPosition[][] :
-    N extends 3 ? SuperPosition[][][] :
-    N extends 4 ? SuperPosition[][][][] :
-    N extends 5 ? SuperPosition[][][][][] :
-    N extends 6 ? SuperPosition[][][][][][] :
-    N extends 7 ? SuperPosition[][][][][][][] :
-    N extends 8 ? SuperPosition[][][][][][][][] :
-    N extends 9 ? SuperPosition[][][][][][][][][] :
-    N extends 10 ? SuperPosition[][][][][][][][][][] :
-    N extends 11 ? SuperPosition[][][][][][][][][][][] : never,
+    N extends 0 ? Point['coordinates'] :
+    N extends 1 ? LineString['coordinates'] :
+    N extends 2 ? Polygon['coordinates'] :
+    N extends 3 ? Polyhedron['coordinates'] :
+    N extends 4 ? Polychoron['coordinates'] :
+    N extends 5 ? Polychoron['coordinates'][] :
+    N extends 6 ? Polychoron['coordinates'][][] :
+    N extends 7 ? Polychoron['coordinates'][][][] :
+    N extends 8 ? Polychoron['coordinates'][][][][] :
+    N extends 9 ? Polychoron['coordinates'][][][][][] :
+    N extends 10 ? Polychoron['coordinates'][][][][][][] :
+    N extends 11 ? Polychoron['coordinates'][][][][][][][] : never,
 }
 
 export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends SuperGeoJsonObject {
   type:
-    N extends 0 ? 'MultiPoint' | 'MultiPolytope0' :
-    N extends 1 ? 'MultiLineString' | 'MultiPolytope1' :
-    N extends 2 ? 'MultiPolygon' | 'MultiPolytope2' :
-    N extends 3 ? 'MultiPolyhedron' | 'MultiPolytope3' :
-    N extends 4 ? 'MultiPolychoron' | 'MultiPolytope4' :
+    N extends 0 ? MultiPoint['type'] :
+    N extends 1 ? MultiLineString['type'] :
+    N extends 2 ? MultiPolygon['type'] :
+    N extends 3 ? MultiPolyhedron['type'] :
+    N extends 4 ? MultiPolychoron['type'] :
     N extends 5 ? 'MultiPolytope5' :
     N extends 6 ? 'MultiPolytope6' :
     N extends 7 ? 'MultiPolytope7' :
@@ -98,22 +103,22 @@ export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
     N extends 10 ? 'MultiPolytope10' :
     N extends 11 ? 'MultiPolytope11' : never,
   coordinates:
-    N extends 0 ? SuperPosition[] :
-    N extends 1 ? SuperPosition[][] :
-    N extends 2 ? SuperPosition[][][] :
-    N extends 3 ? SuperPosition[][][][] :
-    N extends 4 ? SuperPosition[][][][][] :
-    N extends 5 ? SuperPosition[][][][][][] :
-    N extends 6 ? SuperPosition[][][][][][][] :
-    N extends 7 ? SuperPosition[][][][][][][][] :
-    N extends 8 ? SuperPosition[][][][][][][][][] :
-    N extends 9 ? SuperPosition[][][][][][][][][][] :
-    N extends 10 ? SuperPosition[][][][][][][][][][][] :
-    N extends 11 ? SuperPosition[][][][][][][][][][][][] : never,
+  N extends 0 ? MultiPoint['coordinates'] :
+  N extends 1 ? MultiLineString['coordinates'] :
+  N extends 2 ? MultiPolygon['coordinates'] :
+  N extends 3 ? MultiPolyhedron['coordinates'] :
+  N extends 4 ? MultiPolychoron['coordinates'] :
+  N extends 5 ? MultiPolychoron['coordinates'][] :
+  N extends 6 ? MultiPolychoron['coordinates'][][] :
+  N extends 7 ? MultiPolychoron['coordinates'][][][] :
+  N extends 8 ? MultiPolychoron['coordinates'][][][][] :
+  N extends 9 ? MultiPolychoron['coordinates'][][][][][] :
+  N extends 10 ? MultiPolychoron['coordinates'][][][][][][] :
+  N extends 11 ? MultiPolychoron['coordinates'][][][][][][][] : never,
 }
 
 export interface SuperGeometryCollection<G extends SuperGeometry = SuperGeometry> extends GeoJSOnObject {
-  type: "SuperGeometryCollection",
+  type: 'SuperGeometryCollection',
   geometries: G[],
 }
 
