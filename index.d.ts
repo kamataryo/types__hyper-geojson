@@ -22,8 +22,17 @@ export interface HyperGeoJsonObject {
   type: HyperGeoJsonTypes,
   bbox?: HyperBBox | undefined,
 }
+
+export type Dimension = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+
 export type HyperGeoJSON = HyperGeometry | HyperFeature | HyperFeatureCollection
-export type HyperGeometry = GeoJSON.Geometry | Polyhedron | MultiPolyhedron | Polytope | MultiPolytope
+export type HyperGeometry<N extends Dimension = 4> = GeoJSON.Geometry |
+  Polyhedron |
+  MultiPolyhedron |
+  Polychoron |
+  MultiPolychoron |
+  Polytope<N> |
+  MultiPolytope<N>
 export type HyperGeometryObject = HyperGeometry
 
 export interface Point extends GeoJSON.Point {
@@ -71,7 +80,7 @@ export interface MultiPolychoron extends HyperGeoJsonObject {
   coordinates: HyperPosition[][][][][],
 }
 
-export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends HyperGeoJsonObject {
+export interface Polytope<N extends Dimension = 4> extends HyperGeoJsonObject {
   type:
     N extends 0 ? Point['type'] :
     N extends 1 ? LineString['type'] :
@@ -100,7 +109,7 @@ export interface Polytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
     N extends 11 ? Polychoron['coordinates'][][][][][][][] : never,
 }
 
-export interface MultiPolytope<N extends 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 = 4> extends HyperGeoJsonObject {
+export interface MultiPolytope<N extends Dimension = 4> extends HyperGeoJsonObject {
   type:
     N extends 0 ? MultiPoint['type'] :
     N extends 1 ? MultiLineString['type'] :
