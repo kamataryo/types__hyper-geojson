@@ -132,9 +132,14 @@ export function highlight(line) {
 // ---------------------------------------------------------------------------
 
 export class Editor {
-  /** @param {HTMLElement} root  @param {{ label: string, onChange: (text: string) => void }} options */
-  constructor(root, { label, onChange }) {
+  /**
+   * @param {HTMLElement} root
+   * @param {{ label: string, onChange: (text: string) => void, onInput?: (text: string) => void }} options
+   *   onInput hears every edit at once; onChange hears it once typing pauses
+   */
+  constructor(root, { label, onChange, onInput }) {
     this.onChange = onChange
+    this.onInput = onInput
     this.lines = ['']
     this.marks = new Map() // line -> severity
     root.classList.add('editor')
@@ -150,6 +155,7 @@ export class Editor {
     const changed = () => {
       this.lines = this.textarea.value.split('\n')
       this.paint()
+      this.onInput?.(this.textarea.value)
       clearTimeout(timer)
       timer = setTimeout(() => this.onChange(this.textarea.value), 250)
     }

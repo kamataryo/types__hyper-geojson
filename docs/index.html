@@ -651,16 +651,32 @@ export const tooShallow: Polytope&lt;5&gt; = {
     renderIssues()
   }
 
-  const editor = new Editor($('editor'), { label: 'HyperGeoJSON source', onChange: text => process(text, { keepPose: true }) })
+  // What was last opened, to tell an edited sample from the sample itself
+  let loaded = { sample: null, text: '' }
+
+  const editor = new Editor($('editor'), {
+    label: 'HyperGeoJSON source',
+    // a single edit means the source is no longer the sample; undoing back to it selects the sample again
+    onInput: text => select(text === loaded.text ? loaded.sample : null),
+    onChange: text => process(text, { keepPose: true }),
+  })
 
   // ---- loading ----
 
   function status(message) { $('status').textContent = message ?? ''; $('status').hidden = !message }
 
-  function open(text, sample = null) {
+  // Marks which sample the editor holds, if any: the sample buttons and the address follow it
+  function select(sample) {
+    if (sample === state.sample) return
     state.sample = sample
     for (const name of SAMPLES) $(`sample-${name}`).setAttribute('aria-pressed', name === sample)
-    if (sample) try { history.replaceState(null, '', `#${sample}`) } catch {}
+    try { history.replaceState(null, '', sample ? `#${sample}` : location.pathname + location.search) } catch {}
+  }
+
+  function open(text, sample = null) {
+    loaded = { sample, text }
+    state.sample = undefined
+    select(sample)
     status(null)
     editor.text = text
     process(text, { keepPose: false })
