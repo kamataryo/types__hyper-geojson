@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<base href="../">
+<!-- Generated from ../index.html by scripts/build-site.mjs: edit that file, not this one -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title data-i18n="document.title">Visionneuse HyperGeoJSON</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- share: written by scripts/build-site.mjs -->
+<meta name="description" content="Une extension de GeoJSON à la 3D et aux dimensions supérieures.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="HyperGeoJSON">
+<meta property="og:title" content="HyperGeoJSON">
+<meta property="og:description" content="Une extension de GeoJSON à la 3D et aux dimensions supérieures.">
+<meta property="og:url" content="https://kamataryo.github.io/types__hyper-geojson/fr/">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:image" content="https://kamataryo.github.io/types__hyper-geojson/social/og.fr.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="HyperGeoJSON : un tesseract dessiné en projection de Petrie sur un plan.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" hreflang="en" href="https://kamataryo.github.io/types__hyper-geojson/">
+<link rel="alternate" hreflang="ja" href="https://kamataryo.github.io/types__hyper-geojson/ja/">
+<link rel="alternate" hreflang="fr" href="https://kamataryo.github.io/types__hyper-geojson/fr/">
+<link rel="alternate" hreflang="x-default" href="https://kamataryo.github.io/types__hyper-geojson/">
+<!-- /share -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono&family=Michroma&display=swap">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<main class="sheet">
+  <header class="masthead">
+    <div class="masthead-row">
+      <h1>HyperGeoJSON</h1>
+      <div class="group">
+        <a href="https://github.com/kamataryo/types__hyper-geojson">GitHub</a>
+        <div class="group languages" role="group" aria-label="Langue" data-i18n-aria-label="controls.language">
+          <a href="./" lang="en">English</a>
+          <a href="ja/" lang="ja">日本語</a>
+          <a href="fr/" lang="fr" aria-current="page">Français</a>
+        </div>
+      </div>
+    </div>
+    <p data-i18n="lede">Une extension de GeoJSON à la 3D et aux dimensions supérieures.</p>
+  </header>
+
+  <section class="part" aria-labelledby="install-heading">
+    <h2 class="part-title" id="install-heading" data-i18n="install.heading">Installation</h2>
+    <div class="tabs" role="tablist" aria-label="Gestionnaire de paquets" data-i18n-aria-label="aria.packageManager">
+      <button type="button" role="tab" id="pm-pnpm" data-pm="pnpm" aria-controls="install-command" aria-selected="true">pnpm</button>
+      <button type="button" role="tab" id="pm-npm" data-pm="npm" aria-controls="install-command" aria-selected="false" tabindex="-1">npm</button>
+      <button type="button" role="tab" id="pm-yarn" data-pm="yarn" aria-controls="install-command" aria-selected="false" tabindex="-1">yarn</button>
+      <button type="button" role="tab" id="pm-bun" data-pm="bun" aria-controls="install-command" aria-selected="false" tabindex="-1">bun</button>
+    </div>
+    <div class="command" id="install-command" role="tabpanel" aria-labelledby="pm-pnpm">
+      <code><span class="prompt" aria-hidden="true">$ </span><span id="install-text">pnpm add -D @types/hyper-geojson@github:kamataryo/types__hyper-geojson#main</span></code>
+      <button type="button" id="copy" aria-label="Copy" title="Copy"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="idle" d="M5.5 5.5h8v8h-8zM10.5 5.5v-3h-8v8h3"/><path class="done" d="M3 8.5l3.5 3.5L13 4"/></svg></button>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="usage-heading">
+    <h2 class="part-title" id="usage-heading" data-i18n="usage.heading">Utilisation</h2>
+    <div class="examples">
+      <figure class="example">
+        <figcaption data-i18n="usage.solid">Un solide est une liste de faces, chacune un polygone tourné vers l’extérieur.</figcaption>
+        <div class="listing"><div class="filename">cube.ts</div><pre><code class="ts">import type { Polyhedron } from 'hyper-geojson'
+
+// A unit cube: six square faces, each turned to face outward
+export const cube: Polyhedron = {
+  type: 'Polyhedron',
+  coordinates: [
+    [[[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]]],
+    [[[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1], [0, 0, 0]]],
+    [[[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0], [0, 0, 0]]],
+    [[[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]]],
+    [[[1, 1, 1], [1, 1, 0], [0, 1, 0], [0, 1, 1], [1, 1, 1]]],
+    [[[1, 1, 1], [0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]]],
+  ],
+}</code></pre></div>
+      </figure>
+      <div class="stack">
+        <figure class="example">
+          <figcaption data-i18n="usage.feature">Les entités portent des polyèdres, des polychores et des polytopes plus grands, et l’imbrication indique à TypeScript jusqu’où regarder.</figcaption>
+          <div class="listing"><div class="filename">corners.ts</div><pre><code class="ts">import type { HyperFeature, HyperPosition, Polychoron } from 'hyper-geojson'
+
+// Every corner of a polychoron: cells, then faces, then rings, then positions
+export function corners(feature: HyperFeature&lt;Polychoron&gt;): HyperPosition[] {
+  return feature.geometry.coordinates.flat(3)
+}</code></pre></div>
+        </figure>
+        <figure class="example">
+          <figcaption data-i18n="usage.check">Si l’imbrication est fausse, TypeScript vous le signale.</figcaption>
+          <div class="listing"><div class="filename">depth.ts</div><pre><code class="ts">import type { Polytope } from 'hyper-geojson'
+
+// A 5-polytope nests its positions five levels deep
+export const fine: Polytope&lt;5&gt; = {
+  type: 'Polytope5',
+  coordinates: [[[[[[0, 0, 0, 0, 0]]]]]],
+}
+
+export const tooShallow: Polytope&lt;5&gt; = {
+  type: 'Polytope5',
+  // @ts-expect-error four levels are one too few
+  coordinates: [[[[[0, 0, 0, 0, 0]]]]],
+}</code></pre></div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="viewer-heading">
+  <h2 class="part-title" id="viewer-heading" data-i18n="viewer.heading">Visionneuse</h2>
+
+  <div class="catalog" role="group" aria-labelledby="samples-label">
+    <span class="group-label" id="samples-label" data-i18n="controls.sample">Exemple</span>
+    <div class="shelves" id="shelves"></div>
+  </div>
+
+  <nav class="controls" aria-label="Commandes du dessin" data-i18n-aria-label="aria.controls">
+    <div class="group" role="group" aria-label="Mouvement" data-i18n-aria-label="aria.motion">
+      <button type="button" id="align" data-i18n="controls.align">Aligner les axes</button>
+      <label class="check" for="normals"><input type="checkbox" id="normals" checked> <span data-i18n="controls.normals">Normales</span></label>
+    </div>
+    <div class="group" role="group" aria-labelledby="planes-label">
+      <span class="group-label" id="planes-label" data-i18n="controls.turn">Tourner dans</span>
+      <span class="group" id="planes"></span>
+    </div>
+  </nav>
+  <p class="status" id="status" role="status" hidden></p>
+
+  <section class="drawing" aria-label="Dessin" data-i18n-aria-label="aria.drawing">
+    <figure>
+      <div class="stage">
+        <canvas id="petrie" role="img" aria-label="Petrie view"></canvas>
+        <button type="button" id="play" aria-label="Pause" title="Pause"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="pause" d="M4 3h3v10H4zM9 3h3v10H9z"/><path class="play" d="M4 2.5v11l9-5.5z"/></svg></button>
+      </div>
+      <figcaption><b data-i18n="petrie.title">Vue de Petrie</b></figcaption>
+    </figure>
+    <figure id="multiview">
+      <div class="views" id="views"></div>
+      <figcaption><b data-i18n="coordinate.title">Vues de coordonnées</b></figcaption>
+    </figure>
+  </section>
+
+  <section class="details">
+    <div id="facets-section">
+      <h2 id="facets-heading">cells</h2>
+      <div class="facets" id="facets"></div>
+      <button type="button" id="facets-more" data-i18n="facets.more" hidden>Afficher plus</button>
+      <p class="readout" id="readout" aria-live="polite"></p>
+    </div>
+    <dl class="title-block" id="title-block" aria-label="Cartouche" data-i18n-aria-label="aria.titleBlock"></dl>
+  </section>
+
+  <section class="source" aria-labelledby="source-heading">
+    <h2 id="source-heading" data-i18n="source.heading">Éditeur en direct</h2>
+    <div id="editor"></div>
+    <div class="issues">
+      <p id="issues-summary" aria-live="polite"></p>
+      <ol id="issues"></ol>
+    </div>
+  </section>
+  </section>
+
+  <section class="part" aria-labelledby="orientation-heading">
+    <h2 class="part-title" id="orientation-heading" data-i18n="orientation.heading">Règle d’orientation</h2>
+    <p class="note" data-i18n="orientation.rule">Chaque bord est tourné à l’opposé de ce qu’il borde. C’est la règle de la main droite de GeoJSON, étendue à toutes les dimensions :</p>
+    <ul class="note">
+      <li data-i18n="orientation.polygon">L’anneau extérieur d’un polygone tourne dans le sens inverse des aiguilles d’une montre, et ses trous dans le sens des aiguilles d’une montre.</li>
+      <li data-i18n="orientation.polyhedron">Les faces d’un polyèdre, selon la règle de la main droite, tournent leurs normales à l’opposé du solide, donc vers l’intérieur de tout vide qu’il contient.</li>
+      <li data-i18n="orientation.polychoron">Les cellules d’un polychore sont tournées vers l’extérieur de la même façon.</li>
+    </ul>
+    <p class="note" data-i18n="orientation.neighbours">Ainsi, les deux voisins de chaque bord commun le parcourent en sens opposés : chaque arête d’un polyèdre par deux faces, chaque face d’un polychore par deux cellules. Le nombre d’enroulement d’un point vaut alors 1 à l’intérieur du solide, et 0 à l’extérieur ou dans un vide.</p>
+    <p class="note" data-i18n="orientation.void">Un vide n’a pas besoin de son propre niveau d’imbrication : c’est un bord tourné dans l’autre sens. Les types ne vérifient que la profondeur d’imbrication : un bord vrillé ou ouvert passe donc la vérification, comme un anneau ouvert en GeoJSON.</p>
+  </section>
+</main>
+
+<aside class="pip" id="pip" hidden aria-labelledby="pip-title">
+  <div class="pip-bar">
+    <span id="pip-title" data-i18n="petrie.title">Vue de Petrie</span>
+    <button type="button" id="pip-back" aria-label="Revenir au dessin" title="Revenir au dessin" data-i18n-aria-label="pip.back" data-i18n-title="pip.back">↑</button>
+    <button type="button" id="pip-close" aria-label="Fermer la petite vue" title="Fermer la petite vue" data-i18n-aria-label="pip.close" data-i18n-title="pip.close">×</button>
+  </div>
+  <canvas id="pip-canvas" role="img" aria-label="Vue de Petrie" data-i18n-aria-label="petrie.title"></canvas>
+</aside>
+
+<script type="module" src="page.js"></script>
+</body>
+</html>

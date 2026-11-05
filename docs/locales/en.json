@@ -1,7 +1,8 @@
 {
   "document.title": "HyperGeoJSON Viewer",
-  "lede": "TypeScript types that extend GeoJSON to any number of dimensions. The rings of a polygon become the faces of a polyhedron, then the cells of a polychoron, and so on: one level of nesting for each dimension.",
-  "viewer.intro": "Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.",
+  "lede": "A 3D and higher-dimensional extension of GeoJSON.",
+  "og.imageAlt": "HyperGeoJSON: a tesseract drawn as its Petrie projection on a blueprint sheet.",
+  "og.boundary": "16 vertices · 32 edges · 24 faces · 8 cells",
 
   "aria.packageManager": "Package manager",
   "aria.controls": "Drawing controls",
@@ -12,11 +13,9 @@
   "aria.source": "HyperGeoJSON source",
 
   "install.heading": "Install",
-  "install.note": "Not on npm yet, so this installs straight from GitHub. The GeoJSON types it builds on come with it.",
   "install.copy": "Copy",
   "install.copied": "Copied",
   "usage.heading": "Usage",
-  "usage.intro": "Import what you need with import type. The package holds types only, so nothing is added to your code at run time.",
   "usage.solid": "A solid is a list of faces, each a polygon turned to face outward.",
   "usage.feature": "Features carry polyhedra, polychora and higher polytopes, and the nesting tells TypeScript how deep to look.",
   "usage.check": "Get the nesting wrong and TypeScript tells you.",
@@ -28,7 +27,6 @@
 
   "controls.language": "Language",
   "controls.sample": "Sample",
-  "controls.open": "Open file…",
   "controls.play": "Play",
   "controls.pause": "Pause",
   "controls.align": "Align axes",
@@ -70,11 +68,9 @@
   "sample.klein-bottle-4d": "Klein bottle",
 
   "petrie.title": "Petrie view",
-  "petrie.caption": "Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.",
   "pip.back": "Back to the drawing",
   "pip.close": "Close the small view",
   "coordinate.title": "Coordinate views",
-  "coordinate.caption": "Views in a column share their horizontal axis, views in a row their vertical axis.",
 
   "unit.vertex": { "one": "vertex", "other": "vertices" },
   "unit.edge": { "one": "edge", "other": "edges" },
@@ -82,9 +78,9 @@
   "unit.cell": { "one": "cell", "other": "cells" },
   "unit.nface": { "one": "{n}-face", "other": "{n}-faces" },
   "facets.mixed": "facets",
+  "facets.more": "Show more",
   "facet.label": "{name} {index}",
 
-  "readout.hint": "Point at a vertex to follow it through every view. Point at a facet above to pick it out.",
   "readout.vertex": "vertex {index}",
   "readout.facet": "{vertices} vertices, {edges} edges",
   "readout.normal": "normal ({vector})",
@@ -100,11 +96,15 @@
   "block.genus": " (genus {genus})",
   "block.untitled": "Untitled",
 
-  "footer.normals": "Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow tesseract. Every sample follows the [orientation rule].",
-  "footer.drop": "Drop any HyperGeoJSON file on the page to draw it. Types and source: [kamataryo/types__hyper-geojson].",
+  "orientation.heading": "Orientation",
+  "orientation.rule": "Every boundary faces away from what it bounds. This is GeoJSON's right-hand rule, carried to every dimension:",
+  "orientation.polygon": "A polygon's exterior ring runs counterclockwise, and its holes run clockwise.",
+  "orientation.polyhedron": "A polyhedron's faces, by the right-hand rule, turn their normals away from the solid, and so into any void inside it.",
+  "orientation.polychoron": "A polychoron's cells face away from it in the same way.",
+  "orientation.neighbours": "So the two neighbours of every shared boundary traverse it in opposite directions: each edge of a polyhedron by two faces, each face of a polychoron by two cells. A point's winding number is then 1 inside the solid, and 0 outside it or in a void.",
+  "orientation.void": "A void needs no nesting level of its own: it is a boundary that faces the other way. The types check only the nesting depth, so a twisted or open boundary still type-checks, just as an open ring does in GeoJSON.",
 
-  "source.heading": "Source",
-  "source.hint": "Edit the HyperGeoJSON below and the drawing follows as you type. Tab and Shift+Tab indent and outdent; press Esc, then Tab, to leave the editor.",
+  "source.heading": "Live editor",
 
   "issues.none": "No problems found.",
   "issues.errors": { "one": "{count} error", "other": "{count} errors" },
@@ -113,7 +113,6 @@
   "issues.error": "Error",
   "issues.warning": "Warning",
   "issues.location": "Line {line}, column {column}",
-  "issues.stale": "The drawing shows the last version without errors.",
 
   "json.unexpected-token": "{token} cannot go here.",
   "json.unexpected-end": "The text ends before the JSON does.",

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HyperGeoJSON share image</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono&family=Michroma&display=block">
+<style>
+  /* The share image, 1200×630, in the viewer's blueprint colors. scripts/build-site.mjs fills in each language and screenshots it to og.{en,ja,fr}.png */
+  :root {
+    --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
+    --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c;
+    --font-display: "Michroma", "Eurostile", "Arial Narrow", sans-serif;
+    --font-body: "B612", "Segoe UI", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+    --font-mono: "B612 Mono", ui-monospace, Menlo, "Hiragino Sans", "Noto Sans Mono CJK JP", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+  body { display: flex; gap: 36px; padding: 40px; background: var(--paper); color: var(--ink); font-family: var(--font-body); }
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  h1 { margin: 0; font: 400 50px/1.1 var(--font-display); letter-spacing: 0.03em; white-space: nowrap; }
+  p { margin: 16px 0 0; font-size: 27px; line-height: 1.35; color: var(--muted); }
+  dl { display: grid; grid-template-columns: auto minmax(0, 1fr); margin: 0; border: 2px solid var(--ink); background: var(--sheet); font-size: 18px; }
+  dt, dd { margin: 0; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+  dt { font: 13px/1.9 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-right: 1px solid var(--rule); }
+  dl > :nth-last-child(-n + 2) { border-bottom: 0; }
+  svg { flex: none; width: 550px; height: 550px; background: var(--sheet); outline: 1px solid var(--rule); outline-offset: -1px; }
+  svg path { fill: none; stroke-linecap: round; }
+  svg text { font: 15px var(--font-mono); fill: var(--faint); text-anchor: middle; dominant-baseline: central; }
+</style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>HyperGeoJSON</h1>
+      <p data-i18n="lede">A 3D and higher-dimensional extension of GeoJSON.</p>
+    </header>
+    <dl>
+      <dt data-i18n="block.object">Object</dt><dd data-i18n="sample.tesseract">Tesseract</dd>
+      <dt data-i18n="block.type">Type</dt><dd>Polychoron</dd>
+      <dt data-i18n="block.dimension">Dimension</dt><dd>4</dd>
+      <dt data-i18n="block.boundary">Boundary</dt><dd data-i18n="og.boundary">16 vertices · 32 edges · 24 faces · 8 cells</dd>
+    </dl>
+  </main>
+  <!-- The tesseract sample in the viewer's Petrie view, with its first cell picked out -->
+  <svg viewBox="0 0 550 550" role="img" aria-label="A tesseract drawn as its Petrie projection">
+    <path d="M0 275H550M275 0V550" stroke="var(--faint)" stroke-dasharray="2 5"/>
+    <path d="M275 497.9L209.7 340.3M209.7 340.3L52.1 275M52.1 275L117.4 432.6M275 497.9L117.4 432.6M340.3 340.3L182.7 275M182.7 275L117.4 117.4M117.4 117.4L275 182.7M340.3 340.3L275 182.7M117.4 432.6L182.7 275M275 497.9L340.3 340.3M209.7 340.3L275 182.7M52.1 275L117.4 117.4M432.6 432.6L275 367.3M275 367.3L209.7 209.7M209.7 209.7L367.3 275M432.6 432.6L367.3 275M497.9 275L432.6 117.4M432.6 117.4L275 52.1M275 52.1L340.3 209.7M497.9 275L340.3 209.7M432.6 432.6L497.9 275M275 367.3L340.3 209.7M209.7 209.7L275 52.1M367.3 275L432.6 117.4M275 497.9L432.6 432.6M117.4 432.6L275 367.3M52.1 275L209.7 209.7M209.7 340.3L367.3 275M182.7 275L340.3 209.7M340.3 340.3L497.9 275M275 182.7L432.6 117.4M117.4 117.4L275 52.1" stroke="var(--ink)" stroke-width="1.8" opacity="0.72"/>
+    <path d="M206.7 333L172 347.4M364.3 267.7L399 253.4M246.7 373L232.4 407.7M312 215.4L326.4 180.7M303.3 373L317.6 407.7M238 215.4L223.6 180.7M343.3 333L378 347.4M185.7 267.7L151 253.4" stroke="var(--normal)" stroke-width="2.2"/>
+    <g fill="var(--normal)"><circle cx="206.7" cy="333" r="2.8"/><circle cx="364.3" cy="267.7" r="2.8"/><circle cx="246.7" cy="373" r="2.8"/><circle cx="312" cy="215.4" r="2.8"/><circle cx="303.3" cy="373" r="2.8"/><circle cx="238" cy="215.4" r="2.8"/><circle cx="343.3" cy="333" r="2.8"/><circle cx="185.7" cy="267.7" r="2.8"/></g>
+    <path d="M275 497.9L209.7 340.3M209.7 340.3L52.1 275M52.1 275L117.4 432.6M275 497.9L117.4 432.6M340.3 340.3L182.7 275M182.7 275L117.4 117.4M117.4 117.4L275 182.7M340.3 340.3L275 182.7M117.4 432.6L182.7 275M275 497.9L340.3 340.3M209.7 340.3L275 182.7M52.1 275L117.4 117.4" stroke="var(--accent)" stroke-width="3.2"/>
+    <g fill="var(--ink)"><circle cx="275" cy="497.9" r="3"/><circle cx="209.7" cy="340.3" r="3"/><circle cx="52.1" cy="275" r="3"/><circle cx="117.4" cy="432.6" r="3"/><circle cx="340.3" cy="340.3" r="3"/><circle cx="182.7" cy="275" r="3"/><circle cx="117.4" cy="117.4" r="3"/><circle cx="275" cy="182.7" r="3"/><circle cx="432.6" cy="432.6" r="3"/><circle cx="275" cy="367.3" r="3"/><circle cx="209.7" cy="209.7" r="3"/><circle cx="367.3" cy="275" r="3"/><circle cx="497.9" cy="275" r="3"/><circle cx="432.6" cy="117.4" r="3"/><circle cx="275" cy="52.1" r="3"/><circle cx="340.3" cy="209.7" r="3"/></g>
+    <path d="M65.5 484.5L101 469.8M65.5 484.5L80.2 449M65.5 484.5L50.7 449M65.5 484.5L29.9 469.8" stroke="var(--faint)"/>
+    <text x="115.2" y="463.9">x</text><text x="86.1" y="434.8">y</text><text x="44.8" y="434.8">z</text><text x="15.7" y="463.9">w</text>
+  </svg>
+</body>
+</html>

@@ -1,7 +1,8 @@
 {
   "document.title": "HyperGeoJSON ビューア",
-  "lede": "GeoJSON をあらゆる次元に広げる TypeScript の型です。ポリゴンのリングを並べると多面体の面に、面を並べると多胞体のセルに。次元がひとつ上がるたびに、入れ子がひとつ深くなります。",
-  "viewer.intro": "あらゆる次元のポリトープを、その影として描きます。小さな図は、三面図と同じく2つの軸だけを残して残りを落とした投影です。大きな図はすべての軸を等しく扱います。頂点を指すとすべての図でその頂点を追え、ドラッグすると図形が回ります。",
+  "lede": "GeoJSON の3次元および超次元拡張。",
+  "og.imageAlt": "HyperGeoJSON：青図の上にペトリー図として描いた正八胞体（テッセラクト）",
+  "og.boundary": "頂点 16 · 辺 32 · 面 24 · セル 8",
 
   "aria.packageManager": "パッケージマネージャ",
   "aria.controls": "描画の操作",
@@ -12,11 +13,9 @@
   "aria.source": "HyperGeoJSON のソース",
 
   "install.heading": "インストール",
-  "install.note": "まだ npm には公開していないので、GitHub から直接インストールします。土台にしている GeoJSON の型も一緒に入ります。",
   "install.copy": "コピー",
   "install.copied": "コピーしました",
   "usage.heading": "使い方",
-  "usage.intro": "必要な型を import type で読み込みます。型だけのパッケージなので、実行時のコードには何も加わりません。",
   "usage.solid": "立体は面の配列で、各面は外を向いた多角形です。",
   "usage.feature": "Feature には多面体も多胞体もその先のポリトープも入り、入れ子の深さから TypeScript が型を追えます。",
   "usage.check": "入れ子の深さを間違えると、TypeScript が教えてくれます。",
@@ -28,7 +27,6 @@
 
   "controls.language": "言語",
   "controls.sample": "サンプル",
-  "controls.open": "ファイルを開く…",
   "controls.play": "再生",
   "controls.pause": "一時停止",
   "controls.align": "軸をそろえる",
@@ -70,11 +68,9 @@
   "sample.klein-bottle-4d": "クラインの壺",
 
   "petrie.title": "ペトリー図",
-  "petrie.caption": "すべての軸を半回転の中に均等に並べます。等角図が3つの軸を均等に並べるのと同じ考え方です。",
   "pip.back": "図に戻る",
   "pip.close": "小さな図を閉じる",
   "coordinate.title": "座標ビュー",
-  "coordinate.caption": "同じ列の図は横軸を、同じ行の図は縦軸を共有します。",
 
   "unit.vertex": { "other": "頂点" },
   "unit.edge": { "other": "辺" },
@@ -82,9 +78,9 @@
   "unit.cell": { "other": "セル" },
   "unit.nface": { "other": "{n}次元面" },
   "facets.mixed": "境界",
+  "facets.more": "もっとみる",
   "facet.label": "{name} {index}",
 
-  "readout.hint": "頂点を指すと、すべての図でその頂点を追えます。上の一覧から選ぶと、その部分が浮かび上がります。",
   "readout.vertex": "頂点 {index}",
   "readout.facet": "頂点 {vertices}、辺 {edges}",
   "readout.normal": "法線 ({vector})",
@@ -100,11 +96,15 @@
   "block.genus": "（種数 {genus}）",
   "block.untitled": "無題",
 
-  "footer.normals": "黄土色の線は法線で、各境界がどちらを向いているかを示します。境界は立体の外側を向くので、中空の正八胞体（テッセラクト）では空洞の中を向きます。どのサンプルも[向きの規約]に従っています。",
-  "footer.drop": "HyperGeoJSON のファイルをページに落とすと描けます。型とソース：[kamataryo/types__hyper-geojson]",
+  "orientation.heading": "向きの規約",
+  "orientation.rule": "どの境界も、それが囲むものの外側を向きます。GeoJSON の右手の法則を、あらゆる次元に広げたものです。",
+  "orientation.polygon": "ポリゴンの外周は反時計回り、穴は時計回りです。",
+  "orientation.polyhedron": "多面体の面は、右手の法則に従って法線を立体の外側に向けます。内部に空洞があれば、法線は空洞の中を向きます。",
+  "orientation.polychoron": "多胞体のセルも、同じように外側を向きます。",
+  "orientation.neighbours": "そのため、共有された境界は隣り合う2つの要素から逆向きにたどられます。多面体の辺は2つの面から、多胞体の面は2つのセルからです。このとき点の巻き数は、立体の内部で 1、外部と空洞の中で 0 になります。",
+  "orientation.void": "空洞のために入れ子を1段増やす必要はありません。空洞は、逆を向いた境界です。型が検査するのは入れ子の深さだけなので、ねじれた境界や閉じていない境界も型検査を通ります。GeoJSON で閉じていないリングが通るのと同じです。",
 
-  "source.heading": "ソース",
-  "source.hint": "下の HyperGeoJSON を書き換えると、図がそのまま追いかけます。Tab と Shift+Tab で字下げを増減します。エディタから出るには Esc のあと Tab を押します。",
+  "source.heading": "ライブエディタ",
 
   "issues.none": "問題はありません。",
   "issues.errors": { "other": "エラー {count} 件" },
@@ -113,7 +113,6 @@
   "issues.error": "エラー",
   "issues.warning": "警告",
   "issues.location": "{line} 行 {column} 列",
-  "issues.stale": "図には、エラーのなかった最後の内容を表示しています。",
 
   "json.unexpected-token": "ここに {token} は置けません。",
   "json.unexpected-end": "JSON の途中でテキストが終わっています。",

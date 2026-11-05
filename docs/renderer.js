@@ -56,8 +56,8 @@ const geometries = object => located(object).flatMap(g =>
 
 /**
  * Reads a HyperGeoJSON object into vertices, edges and facets.
- * A facet is one boundary of a solid that fills its space (a face of a polyhedron, a cell of a polychoron);
- * each facet carries the outward normal its rings imply.
+ * A facet is one boundary of a solid that fills its space (a face of a polyhedron, a cell of a polychoron),
+ * or one polygon of a surface in 3-space; each facet carries the normal its rings imply, outward on a solid.
  */
 export function read(object) {
   const found = geometries(object)
@@ -115,7 +115,13 @@ export function read(object) {
   for (const { coordinates } of found) {
     const depth = depthOf(coordinates)
     if (depth !== dimension) solid = false
-    if (depth < 3) { element(coordinates, depth); continue }
+    if (depth < 3) {
+      const own = element(coordinates, depth)
+      // A polygon in 3-space is one face of a surface. Its rings give it a normal even if the surface has no outside:
+      // on a Möbius strip the normals of neighbouring faces agree everywhere except across one seam.
+      if (depth === 2 && dimension === 3) facets.push({ dimension: 2, vertices: [...own.vertices], edges: [...own.edges], ...normal(coordinates, 2) })
+      continue
+    }
     for (const facet of coordinates) {
       const own = element(facet, depth - 1)
       facets.push({ dimension: depth - 1, vertices: [...own.vertices], edges: [...own.edges], ...(depth === dimension ? normal(facet, depth - 1) : {}) })

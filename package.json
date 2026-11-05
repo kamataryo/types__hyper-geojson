@@ -5,7 +5,8 @@
   "types": "index.d.ts",
   "scripts": {
     "test": "ts-node index.test.ts",
-    "samples": "node scripts/build-samples.mjs"
+    "samples": "node scripts/build-samples.mjs",
+    "build": "node scripts/build-site.mjs"
   },
   "keywords": [],
   "author": "",
