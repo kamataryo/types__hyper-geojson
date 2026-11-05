@@ -173,7 +173,8 @@ export class Rotation {
       m[i] = normalize(m[i])
     }
   }
-  apply(p) { return this.m.map(row => dot(row, p)) }
+  // p may have fewer axes than the rotation: the missing ones are 0
+  apply(p) { return this.m.map(row => dot(p, row)) }
 }
 
 // ---------------------------------------------------------------------------
@@ -188,7 +189,7 @@ export const coordinateView = (i, j) => ({ kind: 'coordinate', axes: [i, j], pro
 export function petrieView(n) {
   const angles = Array.from({ length: n }, (_, k) => Math.PI * (k + 0.5) / n)
   const s = Math.sqrt(2 / n), u = angles.map(a => s * Math.cos(a)), v = angles.map(a => s * Math.sin(a))
-  return { kind: 'petrie', axes: null, directions: angles.map((a, k) => [u[k], v[k]]), project: p => [dot(p, u), dot(p, v)] }
+  return { kind: 'petrie', axes: null, directions: angles.map((a, k) => [u[k], v[k]]), project: p => [dot(u, p), dot(v, p)] }
 }
 
 /** Sizes a canvas to its box and returns its 2D context in CSS pixels */

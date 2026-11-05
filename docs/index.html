@@ -75,7 +75,7 @@
   .plane { font-family: var(--font-mono); min-width: 2.6em; }
   .catalog { display: grid; gap: 10px; }
   .shelves { display: grid; gap: 8px; }
-  .shelf { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); gap: 6px 10px; align-items: baseline; }
+  .shelf { display: grid; grid-template-columns: 6em minmax(0, 1fr); gap: 6px 10px; align-items: baseline; }
   .shelf-label { font: 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding-top: 7px; }
   .shelf-items { display: flex; flex-wrap: wrap; gap: 6px; }
   .shelf-items button { font-size: 0.8rem; padding: 7px 9px; }
@@ -341,7 +341,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
   </section>
 
   <footer>
-    <p><span class="swatch"></span><span data-i18n="footer.normals">Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow cube. Every sample follows the <a href="https://github.com/kamataryo/types__hyper-geojson#orientation">orientation rule</a>.</span></p>
+    <p><span class="swatch"></span><span data-i18n="footer.normals">Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow tesseract. Every sample follows the <a href="https://github.com/kamataryo/types__hyper-geojson#orientation">orientation rule</a>.</span></p>
     <p data-i18n="footer.drop">Drop any HyperGeoJSON file on the page to draw it. Types and source: <a href="https://github.com/kamataryo/types__hyper-geojson">kamataryo/types__hyper-geojson</a>.</p>
   </footer>
 </main>
@@ -361,12 +361,18 @@ export const tooShallow: Polytope&lt;5&gt; = {
 
   // The samples, shelved by dimension; their names live in the locale files as sample.<id>
   const CATALOG = [
-    ['2d', ['null-island', 'two-hole-donut']],
-    ['3d', ['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'truncated-icosahedron', 'rhombic-dodecahedron', 'stella-octangula', 'menger-sponge', 'hollow-cube', 'torus']],
-    ['4d', ['pentachoron', 'tesseract', '16-cell', '24-cell', '120-cell', '600-cell', 'hollow-tesseract', 'duoprism', 'clifford-torus']],
+    ['2d', ['two-hole-donut', 'moebius-strip-shadow']],
+    ['3d', ['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'truncated-icosahedron', 'rhombic-dodecahedron', 'stella-octangula', 'menger-sponge', 'torus', 'chain', 'moebius-strip', 'klein-bottle']],
+    ['4d', ['pentachoron', 'tesseract', '16-cell', '24-cell', '120-cell', '600-cell', 'hollow-tesseract', 'duoprism', 'clifford-torus', 'klein-bottle-4d']],
     ['5d', ['5-simplex', '5-orthoplex', 'penteract', 'hexeract']],
   ]
   const SAMPLES = CATALOG.flatMap(([, ids]) => ids)
+  // Schläfli symbols, for the samples that have one
+  const SCHLAFLI = {
+    tetrahedron: '{3,3}', cube: '{4,3}', octahedron: '{3,4}', dodecahedron: '{5,3}', icosahedron: '{3,5}', 'truncated-icosahedron': 't{3,5}',
+    pentachoron: '{3,3,3}', tesseract: '{4,3,3}', '16-cell': '{3,3,4}', '24-cell': '{3,4,3}', '120-cell': '{5,3,3}', '600-cell': '{3,3,5}', duoprism: '{6}×{6}',
+    '5-simplex': '{3,3,3,3}', '5-orthoplex': '{3,3,3,4}', penteract: '{4,3,3,3}', hexeract: '{4,3,3,3,3}',
+  }
   // A sample keeps its English name in its file; this finds the sample from that name
   const sampleNamed = name => SAMPLES.find(id => english[`sample.${id}`] === name)
   const LANGUAGES = ['en', 'ja', 'fr']
@@ -537,7 +543,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
       ['block.object', name],
       ['block.type', model.types.join(', ')],
       ['block.dimension', n],
-      ['block.views', t('block.viewsValue', { count: planes(n).length })],
+      ...(SCHLAFLI[known] ? [['block.schlafli', SCHLAFLI[known]]] : []),
       ['block.boundary', model.fVector.map((count, k) => t('block.item', { count, unit: unit(k, count) })).join(' · ')],
       ...(model.euler != null ? [['block.euler', model.euler], ['block.shells', `${model.shells}${genus}`]] : []),
     ]
@@ -584,13 +590,17 @@ export const tooShallow: Polytope&lt;5&gt; = {
 
   function defaultPlanes(n) {
     if (n < 2) return []
-    if (n === 2) return [] // a map stays still until a plane is chosen
+    if (n === 2) return [[0, 1]]
     if (n === 3) return [[0, 2]]
     return [[0, n - 1], [1, 2]]
   }
 
+  // The one exception to n axes: a flat drawing can also turn out of its plane and be seen from the side, through a third axis it does not have
+  const turningAxes = n => n === 2 ? 3 : n
+
   function buildViews(n) {
-    state.rotation = new Rotation(n)
+    const axes = turningAxes(n)
+    state.rotation = new Rotation(axes)
     // a solid starts a little turned, so no edge hides behind another; a map starts north up
     if (n >= 3) for (const [i, j] of planes(n)) state.rotation.turn(i, j, 0.25)
     state.active = new Set(defaultPlanes(n).map(p => p.join(',')))
@@ -600,9 +610,9 @@ export const tooShallow: Polytope&lt;5&gt; = {
     const grid = $('views')
     for (const old of grid.querySelectorAll('canvas')) { watcher.unobserve(old); onScreen.delete(old) }
     grid.replaceChildren()
-    grid.style.setProperty('--columns', Math.max(1, n - 1))
+    grid.style.setProperty('--columns', Math.max(1, axes - 1))
     $('multiview').hidden = n < 2
-    for (let j = 1; j < n; j++) {
+    for (let j = 1; j < axes; j++) {
       grid.append(element('span', { className: 'axis', textContent: axisName(j), style: `grid-area: ${j} / 1` }))
       for (let i = 0; i < j; i++) {
         const canvas = element('canvas', { style: `grid-area: ${j} / ${i + 2}` })
@@ -615,9 +625,9 @@ export const tooShallow: Polytope&lt;5&gt; = {
         state.views.push({ canvas, view })
       }
     }
-    for (let i = 0; i < n - 1; i++) grid.append(element('span', { className: 'axis', textContent: axisName(i), style: `grid-area: ${n} / ${i + 2}` }))
+    for (let i = 0; i < axes - 1; i++) grid.append(element('span', { className: 'axis', textContent: axisName(i), style: `grid-area: ${axes} / ${i + 2}` }))
 
-    $('planes').replaceChildren(...planes(n).map(([i, j]) => {
+    $('planes').replaceChildren(...planes(axes).map(([i, j]) => {
       const key = `${i},${j}`
       const button = element('button', { type: 'button', className: 'plane', id: `plane-${axisName(i)}${axisName(j)}`, textContent: `${axisName(i)}${axisName(j)}` })
       button.setAttribute('aria-pressed', state.active.has(key))

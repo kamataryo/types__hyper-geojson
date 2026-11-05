@@ -162,19 +162,71 @@ function rect(k, at, facing, [u0, u1], [v0, v1]) {
   return [...corners, corners[0]]
 }
 
-// A torus: a circle of radius r swept around a circle of radius R, as n x n flat quads.
-// Each ring runs first around the axis, then around the tube, which turns it to face outward.
-// Indices wrap with % n, so the seam meets itself exactly.
-function torus(n = 16, R = 2, r = 0.8) {
-  const p = (i, j) => { const u = 2 * Math.PI * (i % n) / n, v = 2 * Math.PI * (j % n) / n; return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)] }
+// A surface as a grid of n x m quads. p is also asked for column n and row m, which is where a seam gets joined.
+function grid(n, m, p) {
   const quads = []
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) quads.push([[p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), p(i, j)]])
+  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) quads.push([[p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), p(i, j)]])
   return quads
+}
+
+// A torus: a circle of radius r swept around a circle of radius R, as n x m flat quads.
+// The tube is much shorter around than the ring, so it takes fewer quads.
+// Each ring runs first around the axis, then around the tube, which turns it to face outward.
+// Indices wrap, so the seam meets itself exactly.
+function torus(n = 16, m = 8, R = 2, r = 0.8) {
+  return grid(n, m, (i, j) => { const u = 2 * Math.PI * (i % n) / n, v = 2 * Math.PI * (j % m) / m; return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)] })
+}
+
+// A chain of two links, each running through the other's hole.
+// The second link is a quarter turn about the x axis, which keeps its faces outward, moved along to the first link's tube.
+function chain(R = 2, r = 0.5) {
+  const moved = (a, f) => isPosition(a) ? f(a) : a.map(b => moved(b, f))
+  return [torus(16, 8, R, r), moved(torus(16, 8, R, r), ([x, y, z]) => [x + R, z, -y])]
+}
+
+// A Möbius strip, as n x m quads: a segment of half-width w makes half a turn while going once around a circle of radius R.
+// It has one side, so no inside to enclose: a MultiPolygon, not a Polyhedron.
+// Past the end the segment has turned over, so column n is column 0 read backward. That is the twist.
+function moebius(n = 32, m = 4, R = 2, w = 0.7) {
+  const at = (i, j) => { const u = 2 * Math.PI * i / n, v = w * (2 * j / m - 1), r = R + v * Math.cos(u / 2); return [r * Math.cos(u), r * Math.sin(u), v * Math.sin(u / 2)] }
+  return grid(n, m, (i, j) => i === n ? at(0, m - j) : at(i, j))
+}
+
+// The shadow of a Möbius strip on a plane, seen at a slant so that no cross-section falls on a single point.
+// The plane has no room for the twist, so the strip folds over itself, and a quad on a fold can cross itself.
+// Each runs counterclockwise, as a polygon in the plane should.
+function moebiusShadow(tilt = 0.9) {
+  return moebius().map(([ring]) => {
+    const flat = ring.map(([x, y, z]) => [x, y * Math.cos(tilt) - z * Math.sin(tilt)])
+    return [volume([flat], [0, 0]) > 0 ? flat : [...flat].reverse()]
+  })
+}
+
+// The Klein bottle in three dimensions, in its bottle shape (Cartan's parametrization). It has to pass through itself at the neck.
+// Like the strip it has one side, so it is a MultiPolygon. Column n is column 0 reflected: v becomes pi - v.
+function kleinBottle(n = 24, m = 8) {
+  const at = (i, j) => {
+    const u = Math.PI * i / n, v = 2 * Math.PI * (j % m) / m
+    const [cu, su, cv, sv] = [Math.cos(u), Math.sin(u), Math.cos(v), Math.sin(v)]
+    return [
+      -2 / 15 * cu * (3 * cv - 30 * su + 90 * cu ** 4 * su - 60 * cu ** 6 * su + 5 * cu * cv * su),
+      -1 / 15 * su * (3 * cv - 3 * cu ** 2 * cv - 48 * cu ** 4 * cv + 48 * cu ** 6 * cv - 60 * su + 5 * cu * cv * su - 5 * cu ** 3 * cv * su - 80 * cu ** 5 * cv * su + 80 * cu ** 7 * cv * su),
+      2 / 15 * (3 + 5 * cu * su) * sv,
+    ]
+  }
+  return grid(n, m, (i, j) => i === n ? at(0, m / 2 - j + m) : at(i, j))
+}
+
+// The Klein bottle in four dimensions, where it need not pass through itself: a tube around a circle, whose
+// cross-section turns half a turn through z and w on the way, so it comes back upside down. Column n is column 0 with v as -v.
+function kleinBottle4(n = 24, m = 8, R = 2, r = 1) {
+  const at = (i, j) => { const u = 2 * Math.PI * i / n, v = 2 * Math.PI * (j % m) / m, s = R + r * Math.cos(v); return [s * Math.cos(u), s * Math.sin(u), r * Math.sin(v) * Math.cos(u / 2), r * Math.sin(v) * Math.sin(u / 2)] }
+  return grid(n, m, (i, j) => i === n ? at(0, m - j) : at(i, j))
 }
 
 // A donut with two holes, in the plane: a Cassini oval around two round holes.
 // The outline runs counterclockwise and the holes clockwise, as GeoJSON asks.
-function twoHoleDonut(outline = 256, hole = 128) {
+function twoHoleDonut(outline = 48, hole = 16) {
   const a = 1, b = 1.15 // b > a gives the peanut-shaped oval around the foci (±a, 0)
   const loop = (n, at) => { const ring = Array.from({ length: n }, (_, k) => at(2 * Math.PI * k / n)); return [...ring, ring[0]] }
   const outer = loop(outline, t => { const r = Math.sqrt(a * a * Math.cos(2 * t) + Math.sqrt(b ** 4 - a ** 4 * Math.sin(2 * t) ** 2)); return [r * Math.cos(t), r * Math.sin(t)] })
@@ -206,10 +258,7 @@ function menger(level) {
 
 // The flat torus in four dimensions, as a mesh of n x n squares (a surface, not a solid)
 function cliffordTorus(n = 16) {
-  const p = (i, j) => { const a = 2 * Math.PI * (i % n) / n, b = 2 * Math.PI * (j % n) / n; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)].map(x => x / Math.SQRT2) }
-  const quads = []
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) quads.push([[p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), p(i, j)]])
-  return quads
+  return grid(n, n, (i, j) => { const a = 2 * Math.PI * (i % n) / n, b = 2 * Math.PI * (j % n) / n; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)].map(x => x / Math.SQRT2) })
 }
 
 // The n-n duoprism: a regular n-gon times a regular n-gon
@@ -261,6 +310,38 @@ function volume(coordinates, p0) {
   return [...flags(coordinates)].reduce((s, f) => s + flagDet(f, p0), 0) / factorial(depth(coordinates))
 }
 
+// What a mesh is as a surface: Euler characteristic, whether it has an edge, and whether it can be turned consistently.
+// With the characteristic at 0, these tell a torus, a Möbius strip and a Klein bottle apart.
+function surface(polygons) {
+  const vertices = new Set(), edges = new Map()
+  polygons.forEach(([ring], face) => {
+    for (let k = 0; k + 1 < ring.length; k++) {
+      const [p, q] = [ring[k].join(), ring[k + 1].join()], key = p < q ? `${p}|${q}` : `${q}|${p}`
+      vertices.add(p)
+      edges.set(key, [...edges.get(key) ?? [], { face, way: p < q ? 1 : -1 }])
+    }
+  })
+  if ([...edges.values()].some(e => e.length > 2)) throw new Error('more than two polygons meet at an edge')
+  // Walk the faces, turning each to agree with the one before: neighbours should walk a shared edge opposite ways
+  const neighbours = polygons.map(() => [])
+  for (const e of edges.values()) if (e.length === 2) {
+    neighbours[e[0].face].push({ face: e[1].face, flip: e[0].way === e[1].way })
+    neighbours[e[1].face].push({ face: e[0].face, flip: e[0].way === e[1].way })
+  }
+  const turned = new Map([[0, false]]), stack = [0]
+  let orientable = true
+  while (stack.length) {
+    const face = stack.pop()
+    for (const n of neighbours[face]) {
+      const want = turned.get(face) !== n.flip
+      if (!turned.has(n.face)) { turned.set(n.face, want); stack.push(n.face) }
+      else if (turned.get(n.face) !== want) orientable = false
+    }
+  }
+  if (turned.size !== polygons.length) throw new Error('the mesh falls apart into separate pieces')
+  return { euler: vertices.size - edges.size + polygons.length, closed: [...edges.values()].every(e => e.length === 2), orientable }
+}
+
 // ---------------------------------------------------------------------------
 // Samples
 // ---------------------------------------------------------------------------
@@ -268,25 +349,12 @@ function volume(coordinates, p0) {
 const hyper = (name, type, coordinates) => ({ type: 'HyperFeature', properties: { name }, geometry: { type, coordinates } })
 const feature = (name, geometry) => ({ type: 'Feature', properties: { name }, geometry })
 
-// Null Island, at 0° N 0° E where the equator meets the prime meridian: plain GeoJSON with [longitude, latitude]
-const island = [[0.006, -0.001], [0.005, 0.003], [0.002, 0.005], [-0.002, 0.004], [-0.005, 0.005], [-0.006, 0.001], [-0.004, -0.003], [-0.001, -0.005], [0.003, -0.004], [0.006, -0.001]]
-const lagoon = [[0.001, 0.001], [-0.0005, -0.001], [-0.002, 0], [-0.001, 0.0015], [0.001, 0.001]] // a hole runs clockwise
-const nullIsland = {
-  type: 'FeatureCollection',
-  features: [
-    feature('Null Island', { type: 'Polygon', coordinates: [island, lagoon] }),
-    feature('Equator', { type: 'LineString', coordinates: [[-0.009, 0], [0.009, 0]] }),
-    feature('Prime meridian', { type: 'LineString', coordinates: [[0, -0.008], [0, 0.008]] }),
-    feature('Weather buoy', { type: 'Point', coordinates: [0, 0] }),
-    feature('Lighthouses', { type: 'MultiPoint', coordinates: [[0.005, 0.003], [-0.004, -0.003]] }),
-  ],
-}
-
 const tetrahedron = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]]
+const MOEBIUS = { euler: 0, closed: false, orientable: false }, KLEIN = { euler: 0, closed: true, orientable: false }
 const samples = [
   // file, the object, and what to check: expected volumes of the solids (or areas of the polygons) in it
-  ['null-island', nullIsland, { polygons: [null] }],
   ['two-hole-donut', feature('Two-hole donut', { type: 'Polygon', coordinates: twoHoleDonut() }), { polygons: [null] }],
+  ['moebius-strip-shadow', feature('Shadow of a Möbius strip', { type: 'MultiPolygon', coordinates: moebiusShadow() }), { surface: MOEBIUS }],
 
   ['tetrahedron', hyper('Tetrahedron', 'Polyhedron', convex(tetrahedron)), { solids: [8 / 3] }],
   ['cube', hyper('Cube', 'Polyhedron', cube(3)), { solids: [1] }],
@@ -300,8 +368,10 @@ const samples = [
   ['rhombic-dodecahedron', hyper('Rhombic dodecahedron', 'Polyhedron', convex([...signs([1, 1, 1]), ...permutations([2, 0, 0]).flatMap(signs)].filter((p, i, all) => all.findIndex(q => q.join() === p.join()) === i))), { solids: [16] }],
   ['stella-octangula', hyper('Stella octangula', 'MultiPolyhedron', [convex(tetrahedron), convex(tetrahedron.map(p => p.map(x => -x)))]), { solids: [8 / 3, 8 / 3] }],
   ['menger-sponge', hyper('Menger sponge, level 2', 'Polyhedron', menger(2)), { solids: [400] }],
-  ['hollow-cube', hyper('Hollow cube', 'Polyhedron', [...cube(3, 0, 3), ...reversed(cube(3, 1, 2))]), { solids: [26] }],
   ['torus', hyper('Torus', 'Polyhedron', torus()), { solids: [null] }],
+  ['chain', hyper('Chain', 'MultiPolyhedron', chain()), { solids: [null, null] }],
+  ['moebius-strip', hyper('Möbius strip', 'MultiPolygon', moebius()), { surface: MOEBIUS }],
+  ['klein-bottle', hyper('Klein bottle', 'MultiPolygon', kleinBottle()), { surface: KLEIN }],
 
   ['pentachoron', hyper('5-cell', 'Polychoron', simplex(4)), { solids: [Math.sqrt(5) / 24] }],
   ['tesseract', hyper('Tesseract', 'Polychoron', cube(4)), { solids: [1] }],
@@ -311,7 +381,8 @@ const samples = [
   ['600-cell', hyper('600-cell', 'Polychoron', (({ points, cells }) => convex(points, cells))(hexacosichoron())), { solids: [null] }],
   ['hollow-tesseract', hyper('Hollow tesseract', 'Polychoron', [...cube(4, 0, 3), ...reversed(cube(4, 1, 2))]), { solids: [80] }],
   ['duoprism', hyper('6-6 duoprism', 'Polychoron', duoprism(6)), { solids: [(3 * Math.sqrt(3) / 2) ** 2] }],
-  ['clifford-torus', hyper('Clifford torus', 'MultiPolygon', cliffordTorus()), {}],
+  ['clifford-torus', hyper('Clifford torus', 'MultiPolygon', cliffordTorus()), { surface: { euler: 0, closed: true, orientable: true } }],
+  ['klein-bottle-4d', hyper('Klein bottle', 'MultiPolygon', kleinBottle4()), { surface: KLEIN }],
 
   ['5-simplex', hyper('5-simplex', 'Polytope5', simplex(5)), { solids: [Math.sqrt(6) / 120] }],
   ['5-orthoplex', hyper('5-orthoplex', 'Polytope5', orthoplex(5)), { solids: [4 / 15] }],
@@ -331,33 +402,36 @@ function format(value, indent = '') {
   return JSON.stringify(value)
 }
 
-const geometriesOf = o => o.features ? o.features.map(f => f.geometry) : [o.geometry]
 for (const [file, object, expect] of samples) {
   const report = []
-  for (const g of geometriesOf(object)) {
-    const members = g.type.startsWith('Multi') ? g.coordinates : [g.coordinates]
-    for (const m of members) {
-      const d = depth(m), n = positions(m)[0].length
-      if (d < 2 || d !== n) continue // only polygons in the plane and full-dimensional solids enclose something
-      const list = d === 2 ? expect.polygons : expect.solids, expected = list?.shift()
-      const a = volume(m, Array(n).fill(0)), b = volume(m, Array.from({ length: n }, (_, k) => 0.37 * (k + 1) - 2))
-      if (Math.abs(a - b) > 1e-9 * Math.max(1, Math.abs(a))) throw new Error(`${file}: the boundary is twisted (${a} from one point, ${b} from another)`)
-      if (a <= 0) throw new Error(`${file}: the boundary faces inward (${a})`)
-      if (expected != null && Math.abs(a - expected) > 1e-6 * Math.max(1, expected)) throw new Error(`${file}: ${d === 2 ? 'area' : 'volume'} ${a}, expected ${expected}`)
-      // a closed surface: every edge of a solid is walked by exactly two faces, once each way
-      if (d === 3) {
-        const walked = new Map()
-        for (const face of m) for (const ring of face) for (let k = 0; k + 1 < ring.length; k++) {
-          const [p, q] = [ring[k].join(), ring[k + 1].join()], key = p < q ? `${p}|${q}` : `${q}|${p}`
-          walked.set(key, (walked.get(key) ?? 0) + (p < q ? 1 : 10))
-        }
-        const odd = [...walked.values()].filter(v => v !== 11).length
-        if (odd) throw new Error(`${file}: ${odd} edges are not walked exactly once each way`)
+  const g = object.geometry
+  const members = g.type.startsWith('Multi') ? g.coordinates : [g.coordinates]
+  for (const m of members) {
+    const d = depth(m), n = positions(m)[0].length
+    if (d < 2 || d !== n) continue // only polygons in the plane and full-dimensional solids enclose something
+    const list = d === 2 ? expect.polygons : expect.solids, expected = list?.shift()
+    const a = volume(m, Array(n).fill(0)), b = volume(m, Array.from({ length: n }, (_, k) => 0.37 * (k + 1) - 2))
+    if (Math.abs(a - b) > 1e-9 * Math.max(1, Math.abs(a))) throw new Error(`${file}: the boundary is twisted (${a} from one point, ${b} from another)`)
+    if (a <= 0) throw new Error(`${file}: the boundary faces inward (${a})`)
+    if (expected != null && Math.abs(a - expected) > 1e-6 * Math.max(1, expected)) throw new Error(`${file}: ${d === 2 ? 'area' : 'volume'} ${a}, expected ${expected}`)
+    // a closed surface: every edge of a solid is walked by exactly two faces, once each way
+    if (d === 3) {
+      const walked = new Map()
+      for (const face of m) for (const ring of face) for (let k = 0; k + 1 < ring.length; k++) {
+        const [p, q] = [ring[k].join(), ring[k + 1].join()], key = p < q ? `${p}|${q}` : `${q}|${p}`
+        walked.set(key, (walked.get(key) ?? 0) + (p < q ? 1 : 10))
       }
-      report.push(`${d === 2 ? "area" : "volume"} ${a.toPrecision(6)}`)
+      const odd = [...walked.values()].filter(v => v !== 11).length
+      if (odd) throw new Error(`${file}: ${odd} edges are not walked exactly once each way`)
     }
+    report.push(`${d === 2 ? "area" : "volume"} ${a.toPrecision(6)}`)
   }
-  const text = format(rounded(object)) + '\n'
+  const final = rounded(object)
+  if (expect.surface) {
+    const found = surface(final.geometry.coordinates) // on the rounded values, since those are what a reader gets
+    for (const k in expect.surface) if (found[k] !== expect.surface[k]) throw new Error(`${file}: ${k} is ${found[k]}, expected ${expect.surface[k]}`)
+  }
+  const text = format(final) + '\n'
   writeFileSync(new URL(`../docs/samples/${file}.json`, import.meta.url), text)
-  console.log(`${file.padEnd(22)} ${(text.length / 1024).toFixed(1).padStart(6)} KB  ${report.length ? `${report.join(' + ')} from two points` : 'a surface: nothing to enclose'}`)
+  console.log(`${file.padEnd(22)} ${(text.length / 1024).toFixed(1).padStart(6)} KB  ${report.length > 4 ? `${report.length} polygons, each counterclockwise` : report.length ? `${report.join(' + ')} from two points` : 'a surface: nothing to enclose'}`)
 }
