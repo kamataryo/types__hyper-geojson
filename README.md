@@ -105,4 +105,14 @@ const polytope12: HyperGeoJSON.Polytope<12> = {
 }
 ```
 
+Features accept polytopes of any dimension. By default, `HyperGeometry` (and so `HyperFeature` and `HyperFeatureCollection`) checks only that a `Polytope${N}` holds positions nested to some depth. Name the dimension to check the depth exactly:
+
+```typescript
+const feature: HyperGeoJSON.HyperFeature<HyperGeoJSON.Polytope<8>> = {
+  type: 'HyperFeature',
+  properties: null,
+  geometry: { type: 'Polytope8', coordinates: [[[[[[[[[0, 0]]]]]]]]] },
+}
+```
+
 This relies on recursive conditional types and needs TypeScript 4.5 or later.

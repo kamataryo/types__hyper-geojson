@@ -25,31 +25,40 @@ export interface HyperGeoJsonObject {
 
 /**
  * Dimension of a polytope: a non-negative integer literal (0, 1, 2, ...), with no upper bound.
- * A Polytope given `number` itself, a negative number or a fraction gets `never`
+ * `number` itself means "any dimension": the type name is `Polytope${number}` and
+ * the nesting depth of the coordinates is not checked.
+ * A Polytope given a negative number or a fraction gets `never`
  * as its `type` and `coordinates`, so it cannot be constructed.
  */
 export type Dimension = number
 
 /**
  * Wraps T in N levels of arrays (`Nest<T, 0>` is T, `Nest<T, 2>` is T[][]).
- * A union N is expanded member by member.
+ * `Nest<T, number>` is T nested any number of levels. A union N is expanded member by member.
  * Requires TypeScript 4.5+ (tail-recursive conditional types); works up to about 1000 levels.
  */
 export type Nest<T, N extends Dimension> =
   N extends number
-    ? IsNonNegativeInteger<N> extends true ? NestLoop<T, N, []> : never
+    ? IsValidDimension<N> extends true
+      ? number extends N ? NestAnyDepth<T> : NestLoop<T, N, []>
+      : never
     : never
+
+export type NestAnyDepth<T> = T | NestAnyDepth<T>[]
 
 type NestLoop<T, N extends number, Acc extends unknown[]> =
   Acc['length'] extends N ? T : NestLoop<T[], N, [...Acc, unknown]>
 
-type IsNonNegativeInteger<N extends number> =
-  number extends N ? false :
+// `number` itself or a non-negative integer literal
+type IsValidDimension<N extends number> =
+  number extends N ? true :
   `${N}` extends `-${string}` | `${string}.${string}` | `${string}e${string}` ? false :
   true
 
 export type HyperGeoJSON = HyperGeometry | HyperFeature | HyperFeatureCollection
-export type HyperGeometry<N extends Dimension = 4> = GeoJSON.Geometry |
+// With the default N (`number`), polytopes of any dimension are accepted, with the depth unchecked.
+// Pass a literal N (e.g. HyperGeometry<8>) to check the depth of that dimension exactly.
+export type HyperGeometry<N extends Dimension = Dimension> = GeoJSON.Geometry |
   Polyhedron |
   MultiPolyhedron |
   Polychoron |
@@ -122,14 +131,14 @@ interface MultiPolytopeTypeNames {
 
 type PolytopeTypeName<N extends Dimension> =
   N extends number
-    ? IsNonNegativeInteger<N> extends true
+    ? IsValidDimension<N> extends true
       ? N extends keyof PolytopeTypeNames ? PolytopeTypeNames[N] : `Polytope${N}`
       : never
     : never
 
 type MultiPolytopeTypeName<N extends Dimension> =
   N extends number
-    ? IsNonNegativeInteger<N> extends true
+    ? IsValidDimension<N> extends true
       ? N extends keyof MultiPolytopeTypeNames ? MultiPolytopeTypeNames[N] : `MultiPolytope${N}`
       : never
     : never
