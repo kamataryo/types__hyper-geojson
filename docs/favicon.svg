@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="20 20 510 510">
+  <!-- The share image's tesseract at a size a browser tab can show: its octagonal outline, and its picked-out cell as a solid cube.
+       The fixed size is for scripts/build-site.mjs: without it, Chrome's 180×180 screenshot of this file comes out cropped. -->
+  <rect x="20" y="20" width="510" height="510" fill="#0c2747"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M275 52.1L432.6 117.4L497.9 275L432.6 432.6L275 497.9L117.4 432.6L52.1 275L117.4 117.4Z" stroke="#e4eefa" stroke-width="28"/>
+    <path d="M52.1 275L117.4 117.4L275 182.7L340.3 340.3L275 497.9L117.4 432.6ZM182.7 275L340.3 340.3M182.7 275L117.4 117.4M182.7 275L117.4 432.6" stroke="#ff8a72" stroke-width="36"/>
+  </g>
+</svg>

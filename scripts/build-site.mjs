@@ -1,6 +1,6 @@
 // Builds the three language versions of the page and their share images, with the words in docs/locales.
 // docs/index.html is the source and also the English page; docs/ja and docs/fr are generated from it.
-// docs/social/og.{en,ja,fr}.png are screenshots of docs/social/og.html, taken with the Chrome on this machine.
+// docs/social/og.{en,ja,fr}.png are screenshots of docs/social/og.html, and docs/apple-touch-icon.png of docs/favicon.svg, taken with the Chrome on this machine.
 //
 //   node scripts/build-site.mjs
 //   CHROME=/path/to/chrome node scripts/build-site.mjs
@@ -84,20 +84,25 @@ for (const code of CODES) {
 
 const image = readFileSync(docs('social/og.html'), 'utf8')
 const work = mkdtempSync(join(tmpdir(), 'hypergeojson-site-')) // a profile of its own, so that a Chrome already running does not take over the job
+function screenshot(page, path, width, height) {
+  const png = docs(path)
+  execFileSync(chrome, [
+    '--headless', `--user-data-dir=${join(work, 'profile')}`, '--hide-scrollbars', '--force-device-scale-factor=1',
+    `--window-size=${width},${height}`, '--virtual-time-budget=5000', // long enough for the web fonts
+    `--screenshot=${png}`, pathToFileURL(page).href,
+  ], { stdio: 'pipe' })
+  // Bytes 16 and 20 of a PNG hold its width and height
+  const file = readFileSync(png), size = [file.readUInt32BE(16), file.readUInt32BE(20)]
+  if (size[0] !== width || size[1] !== height) throw new Error(`${path} came out ${size.join('×')}, not ${width}×${height}`)
+  console.log(`Wrote docs/${path}`)
+}
 try {
   for (const code of CODES) {
-    const html = join(work, `og.${code}.html`), png = docs(`social/og.${code}.png`)
+    const html = join(work, `og.${code}.html`)
     writeFileSync(html, localize(image, code))
-    execFileSync(chrome, [
-      '--headless', `--user-data-dir=${join(work, 'profile')}`, '--hide-scrollbars', '--force-device-scale-factor=1',
-      '--window-size=1200,630', '--virtual-time-budget=5000', // long enough for the web fonts
-      `--screenshot=${png}`, pathToFileURL(html).href,
-    ], { stdio: 'pipe' })
-    // Bytes 16 and 20 of a PNG hold its width and height
-    const file = readFileSync(png), size = [file.readUInt32BE(16), file.readUInt32BE(20)]
-    if (size[0] !== 1200 || size[1] !== 630) throw new Error(`og.${code}.png came out ${size.join('×')}, not 1200×630`)
-    console.log(`Wrote docs/social/og.${code}.png`)
+    screenshot(html, `social/og.${code}.png`, 1200, 630)
   }
+  screenshot(docs('favicon.svg'), 'apple-touch-icon.png', 180, 180)
 } finally {
   rmSync(work, { recursive: true, force: true })
 }
