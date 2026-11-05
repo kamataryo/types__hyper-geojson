@@ -22,6 +22,8 @@
   "sample.pentachoron": "5胞体",
   "sample.hollow-cube": "中空の立方体",
   "sample.penteract": "ペンテラクト",
+  "sample.donut": "ドーナツ",
+  "sample.hexeract": "ヘキセラクト",
 
   "petrie.title": "ペトリー図",
   "petrie.caption": "すべての軸を半回転の中に均等に並べます。等角図が3つの軸を均等に並べるのと同じ考え方です。",
@@ -49,7 +51,8 @@
   "block.euler": "オイラー標数",
   "block.viewsValue": "座標ビュー {count} 枚 + ペトリー図 1 枚",
   "block.item": "{unit} {count}",
-  "block.shells": { "other": "（閉じた殻 {count} 枚）" },
+  "block.shells": "殻",
+  "block.genus": "（種数 {genus}）",
   "block.untitled": "無題",
 
   "footer.normals": "黄土色の線は法線で、各境界がどちらを向いているかを示します。境界は立体の外側を向くので、中空の立方体では空洞の中を向きます。どのサンプルも[向きの規約]に従っています。",

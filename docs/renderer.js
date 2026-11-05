@@ -79,7 +79,9 @@ export function read(object) {
     if (!edgeIds.has(key)) { edgeIds.set(key, edges.length); edges.push(i < j ? [i, j] : [j, i]) }
     return edgeIds.get(key)
   }
-  const faces = [] // faces[k]: the k-dimensional elements (k >= 2), keyed by their vertices
+  // faces[k]: the k-dimensional elements (k >= 2), keyed by their vertices, each with what it adds to
+  // the Euler characteristic: 1, except a face with holes, which adds 1 - holes
+  const faces = []
   const centroid = a => { const ps = []; walk(a, p => ps.push(pad(p))); return mean(ps) }
 
   // Collects the vertices and edges of an element nested `depth` levels deep
@@ -92,8 +94,8 @@ export function read(object) {
     }
     const children = a.map(b => element(b, depth - 1))
     const own = { vertices: new Set(children.flatMap(c => [...c.vertices])), edges: new Set(children.flatMap(c => [...c.edges])) }
-    if (!faces[depth]) faces[depth] = new Set()
-    faces[depth].add([...own.vertices].sort((x, y) => x - y).join(','))
+    if (!faces[depth]) faces[depth] = new Map()
+    faces[depth].set([...own.vertices].sort((x, y) => x - y).join(','), depth === 2 ? 2 - a.length : 1)
     return own
   }
 
@@ -118,20 +120,28 @@ export function read(object) {
       const own = element(facet, depth - 1)
       facets.push({ dimension: depth - 1, vertices: [...own.vertices], edges: [...own.edges], ...(depth === dimension ? normal(facet, depth - 1) : {}) })
     }
-    if (!faces[depth]) faces[depth] = new Set()
+    if (!faces[depth]) faces[depth] = new Map()
   }
 
   // f-vector of the boundary: vertices, edges, faces, ... up to the facets
   const top = Math.max(1, ...found.map(g => depthOf(g.coordinates)))
   const fVector = [vertices.length, edges.length]
   for (let k = 2; k < top; k++) fVector.push(faces[k]?.size ?? 0)
-  const euler = solid && top >= 3 ? fVector.reduce((s, f, k) => s + (k % 2 ? -f : f), 0) : null
+  let euler = null, shells = null
+  if (solid && top >= 3) {
+    euler = vertices.length - edges.length
+    for (let k = 2; k < top; k++) for (const adds of faces[k]?.values() ?? []) euler += k % 2 ? -adds : adds
+    // closed shells: facets joined through the edges they share
+    const parent = facets.map((_, i) => i), root = i => parent[i] === i ? i : (parent[i] = root(parent[i])), seen = new Map()
+    facets.forEach((f, i) => f.edges.forEach(e => { if (seen.has(e)) parent[root(i)] = root(seen.get(e)); else seen.set(e, i) }))
+    shells = new Set(facets.map((_, i) => root(i))).size
+  }
 
   const centre = vertices.length ? mean(vertices) : pad([])
   const radius = Math.max(1e-9, ...vertices.map(v => Math.hypot(...sub(v, centre))))
   const name = object?.properties?.name ?? object?.features?.[0]?.properties?.name ?? null
   const types = [...new Set(found.map(g => g.type))]
-  return { name, types, dimension, vertices, edges, facets, fVector, euler, centre, radius }
+  return { name, types, dimension, vertices, edges, facets, fVector, euler, shells, centre, radius }
 }
 
 // ---------------------------------------------------------------------------
@@ -285,20 +295,42 @@ function expectedDepth(type) {
 // Signed volume from the boundary alone, coned from p0. When every boundary faces the same way
 // it is the same from any p0; when some face the other way, it changes with p0.
 function boundaryVolume(solid, p0, pad) {
-  const centroids = new WeakMap()
-  const centroid = a => {
-    if (!centroids.has(a)) { const ps = []; const walk = b => isPosition(b) ? ps.push(pad(b)) : b.forEach(walk); walk(a); centroids.set(a, mean(ps)) }
-    return centroids.get(a)
-  }
+  const n = p0.length, m = Array.from({ length: n }, () => new Float64Array(n))
+  const centroid = a => { const ps = []; const walk = b => isPosition(b) ? ps.push(pad(b)) : b.forEach(walk); walk(a); return mean(ps) }
   let sum = 0
   const walk = (element, chain) => {
-    if (depthOf(element) > 2) { for (const child of element) walk(child, [...chain, centroid(child)]); return }
-    for (const ring of element) for (let k = 0; k + 1 < ring.length; k++) sum += det([...chain, pad(ring[k]), pad(ring[k + 1])].map(q => sub(q, p0)))
+    if (depthOf(element) > 2) { for (const child of element) walk(child, [...chain, sub(centroid(child), p0)]); return }
+    for (const ring of element) {
+      const shifted = ring.map(p => sub(pad(p), p0))
+      for (let k = 0; k + 1 < shifted.length; k++) {
+        chain.forEach((row, r) => m[r].set(row))
+        m[n - 2].set(shifted[k]); m[n - 1].set(shifted[k + 1])
+        sum += detInPlace(m)
+      }
+    }
   }
-  for (const facet of solid) walk(facet, [centroid(facet)])
+  for (const facet of solid) walk(facet, [sub(centroid(facet), p0)])
   let factorial = 1
-  for (let k = 2; k <= p0.length; k++) factorial *= k
+  for (let k = 2; k <= n; k++) factorial *= k
   return sum / factorial
+}
+
+// The determinant of square rows, worked out in place
+function detInPlace(m) {
+  const n = m.length
+  let d = 1
+  for (let i = 0; i < n; i++) {
+    let p = i
+    for (let r = i + 1; r < n; r++) if (Math.abs(m[r][i]) > Math.abs(m[p][i])) p = r
+    if (m[p][i] === 0) return 0
+    if (p !== i) { const t = m[p]; m[p] = m[i]; m[i] = t; d = -d }
+    d *= m[i][i]
+    for (let r = i + 1; r < n; r++) {
+      const f = m[r][i] / m[i][i]
+      for (let c = i; c < n; c++) m[r][c] -= f * m[i][c]
+    }
+  }
+  return d
 }
 
 /**
@@ -312,14 +344,25 @@ export function inspect(object, limit = 50) {
   const found = located(object)
   if (!found.length) { issue('error', 'no-coordinates', []); return issues }
 
+  // the path below a geometry's coordinates, kept as one stack and copied only when there is something to report
+  const below = [], at = base => [...base, ...below]
+
   // nesting: positions are lists of numbers, and siblings nest equally deep
   const depth = new Map()
-  const measure = (a, path) => {
-    if (!Array.isArray(a) || a.some(x => typeof x === 'number') && !a.every(x => typeof x === 'number')) { issue('error', 'not-a-position', path); return -1 }
-    if (a.length && typeof a[0] === 'number') return 0
-    const depths = a.map((b, i) => measure(b, [...path, i])).filter(d => d >= 0)
-    if (new Set(depths).size > 1) { issue('error', 'ragged', path); return -1 }
-    return depths.length ? depths[0] + 1 : -1
+  const measure = (a, base) => {
+    if (!Array.isArray(a)) { issue('error', 'not-a-position', at(base)); return -1 }
+    const numbers = a.filter(x => typeof x === 'number').length
+    if (numbers) { if (numbers < a.length) { issue('error', 'not-a-position', at(base)); return -1 } return 0 }
+    let d = -1
+    for (let i = 0; i < a.length; i++) {
+      below.push(i)
+      const di = measure(a[i], base)
+      below.pop()
+      if (di < 0) continue
+      if (d >= 0 && di !== d) { issue('error', 'ragged', at(base)); return -1 }
+      d = di
+    }
+    return d < 0 ? -1 : d + 1
   }
   for (const g of found) {
     const before = issues.length, d = measure(g.coordinates, g.path)
@@ -328,11 +371,11 @@ export function inspect(object, limit = 50) {
   if (issues.some(i => i.severity === 'error')) return issues
 
   // positions agree on their dimension
-  const lengths = new Set(), walk = (a, f, path) => isPosition(a) ? f(a, path) : a.forEach((b, i) => walk(b, f, [...path, i]))
-  found.forEach(g => walk(g.coordinates, p => lengths.add(p.length), g.path))
+  const lengths = new Set(), walk = (a, f) => isPosition(a) ? f(a) : a.forEach(b => walk(b, f))
+  found.forEach(g => walk(g.coordinates, p => lengths.add(p.length)))
   const dimension = Math.max(...lengths)
   if (lengths.size > 1) issue('warning', 'mixed-dimension', found[0].path, { dimension })
-  const pad = p => Array.from({ length: dimension }, (_, k) => p[k] ?? 0)
+  const pad = p => p.length === dimension ? p : Array.from({ length: dimension }, (_, k) => p[k] ?? 0)
 
   for (const g of found) {
     const d = depth.get(g), expected = expectedDepth(g.type)
@@ -340,21 +383,22 @@ export function inspect(object, limit = 50) {
 
     // rings close on themselves
     let closed = true
-    const rings = (a, level, path) => {
+    const rings = (a, level) => {
       if (level === 1) {
-        if (a.length < 4) { closed = false; issue('warning', 'short-ring', path, { count: a.length }) }
-        else if (a[0].some((x, k) => x !== a[a.length - 1][k]) || a[0].length !== a[a.length - 1].length) { closed = false; issue('warning', 'open-ring', path) }
+        const first = a[0], last = a[a.length - 1]
+        if (a.length < 4) { closed = false; issue('warning', 'short-ring', at(g.path), { count: a.length }) }
+        else if (first.length !== last.length || first.some((x, k) => x !== last[k])) { closed = false; issue('warning', 'open-ring', at(g.path)) }
         return
       }
-      a.forEach((b, i) => rings(b, level - 1, [...path, i]))
+      a.forEach((b, i) => { below.push(i); rings(b, level - 1); below.pop() })
     }
-    if (d >= 2) rings(g.coordinates, d, g.path)
+    if (d >= 2) rings(g.coordinates, d)
 
     // every boundary of a solid faces away from it (see "Orientation" in the README)
     const multi = g.type.startsWith('Multi'), solidDepth = multi ? d - 1 : d
     if (!closed || solidDepth !== dimension || solidDepth < 3) continue
     for (const [solid, path] of multi ? g.coordinates.map((s, i) => [s, [...g.path, i]]) : [[g.coordinates, g.path]]) {
-      const points = []; walk(solid, p => points.push(pad(p)), [])
+      const points = []; walk(solid, p => points.push(pad(p)))
       const centre = mean(points), radius = Math.max(...points.map(p => Math.hypot(...sub(p, centre))))
       const elsewhere = centre.map((x, k) => x + radius * (0.3 + 0.17 * k))
       const v = boundaryVolume(solid, centre, pad), w = boundaryVolume(solid, elsewhere, pad)

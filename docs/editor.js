@@ -12,50 +12,55 @@ const ESCAPES = { '"': '"', '\\': '\\', '/': '/', b: '\b', f: '\f', n: '\n', r: 
  * of the object or array at that path, or { error: { code, params, line, column, offset } }.
  */
 export function parseJSON(text) {
-  const n = text.length, offsets = new Map()
+  const n = text.length, offsets = new Map(), path = [] // the path to the value being read
+  const key = p => p.join('\u0000')
   let i = 0
   const fail = (code, params = {}, at = i) => { throw { code, params, offset: at } }
   const quote = c => `“${c}”`
   const space = () => { while (i < n && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) i++ }
 
-  function value(path) {
+  function value() {
     space()
     if (i >= n) fail('unexpected-end')
     const c = text[i]
-    if (c === '{' || c === '[') offsets.set(JSON.stringify(path), i)
-    if (c === '{') return object(path)
-    if (c === '[') return array(path)
+    if (c === '{' || c === '[') offsets.set(key(path), i)
+    if (c === '{') return object()
+    if (c === '[') return array()
     if (c === '"') return string()
     if (c === '-' || (c >= '0' && c <= '9')) return number()
     for (const [word, v] of [['true', true], ['false', false], ['null', null]]) if (text.startsWith(word, i)) { i += word.length; return v }
     fail('unexpected-token', { token: quote(c) })
   }
-  function object(path) {
+  function object() {
     const out = {}
     i++; space()
     if (text[i] === '}') { i++; return out }
     for (;;) {
       space()
       if (text[i] !== '"') fail(i >= n ? 'unexpected-end' : text[i] === '}' ? 'trailing-comma' : 'expected-key')
-      const key = string()
+      const name = string()
       space()
       if (text[i] !== ':') fail(i >= n ? 'unexpected-end' : 'expected-colon')
       i++
-      out[key] = value([...path, key])
+      path.push(name)
+      out[name] = value()
+      path.pop()
       space()
       if (text[i] === ',') { i++; continue }
       if (text[i] === '}') { i++; return out }
       fail(i >= n ? 'unexpected-end' : 'expected-comma', { close: quote('}') })
     }
   }
-  function array(path) {
+  function array() {
     const out = []
     i++; space()
     if (text[i] === ']') { i++; return out }
     for (;;) {
       space()
       if (text[i] === ']') fail('trailing-comma')
-      out.push(value([...path, out.length]))
+      path.push(out.length)
+      out.push(value())
+      path.pop()
       space()
       if (text[i] === ',') { i++; continue }
       if (text[i] === ']') { i++; return out }
@@ -92,10 +97,10 @@ export function parseJSON(text) {
     return { line, column: offset - start + 1, offset }
   }
   try {
-    const result = value([])
+    const result = value()
     space()
     if (i < n) fail('extra-content')
-    return { value: result, locate: path => { for (let p = [...path]; ; p.pop()) { const at = offsets.get(JSON.stringify(p)); if (at != null) return where(at); if (!p.length) return where(0) } } }
+    return { value: result, locate: target => { for (let p = [...target]; ; p.pop()) { const at = offsets.get(key(p)); if (at != null) return where(at); if (!p.length) return where(0) } } }
   } catch (error) {
     if (!error || !('code' in error)) throw error
     return { error: { code: error.code, params: error.params, ...where(Math.min(error.offset, n)) } }

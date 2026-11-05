@@ -22,6 +22,8 @@
   "sample.pentachoron": "5-cell",
   "sample.hollow-cube": "Hollow cube",
   "sample.penteract": "Penteract",
+  "sample.donut": "Donut",
+  "sample.hexeract": "Hexeract",
 
   "petrie.title": "Petrie view",
   "petrie.caption": "Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.",
@@ -49,7 +51,8 @@
   "block.euler": "Euler characteristic",
   "block.viewsValue": "{count} coordinate + 1 Petrie",
   "block.item": "{count} {unit}",
-  "block.shells": { "one": " ({count} closed shell)", "other": " ({count} closed shells)" },
+  "block.shells": "Shells",
+  "block.genus": " (genus {genus})",
   "block.untitled": "Untitled",
 
   "footer.normals": "Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow cube. Every sample follows the [orientation rule].",

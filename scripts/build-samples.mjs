@@ -30,6 +30,28 @@ function simplex(vertices) {
   return orient(build(vertices.map((_, i) => i)))
 }
 
+// A square donut: the ring of eight unit cubes around the hole [1,2]^2, one unit high.
+// Its top and bottom are polygons with a hole, written as in GeoJSON.
+function donut() {
+  // A rectangle across the two other axes at `at` on axis k, facing +k or -k by the right-hand rule
+  const rect = (k, at, facing, [u0, u1], [v0, v1]) => {
+    const [u, v] = [(k + 1) % 3, (k + 2) % 3]
+    const point = (a, b) => { const p = [0, 0, 0]; p[k] = at; p[u] = a; p[v] = b; return p }
+    const ring = [point(u0, v0), point(u1, v0), point(u1, v1), point(u0, v1)]
+    if (facing < 0) ring.reverse()
+    return [...ring, ring[0]]
+  }
+  const turned = ring => [ring[0], ...ring.slice(1, -1).reverse(), ring[0]]
+  return [
+    [rect(2, 1, +1, [0, 3], [0, 3]), turned(rect(2, 1, +1, [1, 2], [1, 2]))], // top: the hole runs the other way
+    [rect(2, 0, -1, [0, 3], [0, 3]), turned(rect(2, 0, -1, [1, 2], [1, 2]))], // bottom
+    [rect(0, 0, -1, [0, 3], [0, 1])], [rect(0, 3, +1, [0, 3], [0, 1])],        // outside
+    [rect(1, 0, -1, [0, 1], [0, 3])], [rect(1, 3, +1, [0, 1], [0, 3])],
+    [rect(0, 1, +1, [1, 2], [0, 1])], [rect(0, 2, -1, [1, 2], [0, 1])],        // around the hole, facing into it
+    [rect(1, 1, +1, [0, 1], [1, 2])], [rect(1, 2, -1, [0, 1], [1, 2])],
+  ]
+}
+
 // ---------------------------------------------------------------------------
 // Orientation
 // ---------------------------------------------------------------------------
@@ -102,10 +124,12 @@ const round = x => Math.round(x * 1e6) / 1e6
 const pentachoronVertices = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1], [t, t, t, t].map(round)]
 
 const samples = [
+  { file: 'hollow-cube', name: 'Hollow cube', type: 'Polyhedron', coordinates: [...cube(3, 0, 3), ...reversed(cube(3, 1, 2))], volume: 26 },
+  { file: 'donut', name: 'Donut', type: 'Polyhedron', coordinates: donut(), volume: 8 },
   { file: 'tesseract', name: 'Tesseract', type: 'Polychoron', coordinates: cube(4), volume: 1 },
   { file: 'pentachoron', name: '5-cell', type: 'Polychoron', coordinates: simplex(pentachoronVertices), volume: Math.sqrt(5) / 24 },
-  { file: 'hollow-cube', name: 'Hollow cube', type: 'Polyhedron', coordinates: [...cube(3, 0, 3), ...reversed(cube(3, 1, 2))], volume: 26 },
   { file: 'penteract', name: 'Penteract', type: 'Polytope5', coordinates: cube(5), volume: 1 },
+  { file: 'hexeract', name: 'Hexeract', type: 'Polytope6', coordinates: cube(6), volume: 1 },
 ]
 
 function format(value, indent = '') {

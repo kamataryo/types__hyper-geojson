@@ -169,10 +169,12 @@
   <nav class="controls" aria-label="Drawing controls" data-i18n-aria-label="aria.controls">
     <div class="group" role="group" aria-labelledby="samples-label">
       <span class="group-label" id="samples-label" data-i18n="controls.sample">Sample</span>
+      <button type="button" id="sample-hollow-cube" data-sample="hollow-cube" data-i18n="sample.hollow-cube">Hollow cube</button>
+      <button type="button" id="sample-donut" data-sample="donut" data-i18n="sample.donut">Donut</button>
       <button type="button" id="sample-tesseract" data-sample="tesseract" data-i18n="sample.tesseract">Tesseract</button>
       <button type="button" id="sample-pentachoron" data-sample="pentachoron" data-i18n="sample.pentachoron">5-cell</button>
-      <button type="button" id="sample-hollow-cube" data-sample="hollow-cube" data-i18n="sample.hollow-cube">Hollow cube</button>
       <button type="button" id="sample-penteract" data-sample="penteract" data-i18n="sample.penteract">Penteract</button>
+      <button type="button" id="sample-hexeract" data-sample="hexeract" data-i18n="sample.hexeract">Hexeract</button>
       <label class="file-button" for="file" data-i18n="controls.open">Open file…</label>
       <input class="visually-hidden" type="file" id="file" accept=".json,.geojson,application/json,application/geo+json">
     </div>
@@ -230,8 +232,8 @@
   import { read, inspect, planes, Rotation, coordinateView, petrieView, draw, vertexAt, axisName } from './renderer.js'
   import { Editor, parseJSON } from './editor.js'
 
-  const SAMPLES = ['tesseract', 'pentachoron', 'hollow-cube', 'penteract']
-  const SAMPLE_NAMES = { 'Tesseract': 'tesseract', '5-cell': 'pentachoron', 'Hollow cube': 'hollow-cube', 'Penteract': 'penteract' }
+  const SAMPLES = ['hollow-cube', 'donut', 'tesseract', 'pentachoron', 'penteract', 'hexeract']
+  const SAMPLE_NAMES = { 'Hollow cube': 'hollow-cube', 'Donut': 'donut', 'Tesseract': 'tesseract', '5-cell': 'pentachoron', 'Penteract': 'penteract', 'Hexeract': 'hexeract' }
   const LANGUAGES = ['en', 'ja', 'fr']
   const SPEED = 0.35 // radians per second
   const $ = id => document.getElementById(id)
@@ -377,14 +379,15 @@
   function renderTitleBlock() {
     const { model } = state, n = model.dimension
     const name = SAMPLE_NAMES[model.name] ? t(`sample.${SAMPLE_NAMES[model.name]}`) : model.name ?? t('block.untitled')
-    const shells = model.euler != null && n % 2 === 1 && model.euler > 0 ? t('block.shells', { count: model.euler / 2 }) : ''
+    // a closed surface of genus g has Euler characteristic 2 - 2g, so in 3D the shells tell the genus
+    const genus = n === 3 && model.euler != null ? t('block.genus', { genus: model.shells - model.euler / 2 }) : ''
     const rows = [
       ['block.object', name],
       ['block.type', model.types.join(', ')],
       ['block.dimension', n],
       ['block.views', t('block.viewsValue', { count: planes(n).length })],
       ['block.boundary', model.fVector.map((count, k) => t('block.item', { count, unit: unit(k, count) })).join(' · ')],
-      ...(model.euler != null ? [['block.euler', `${model.euler}${shells}`]] : []),
+      ...(model.euler != null ? [['block.euler', model.euler], ['block.shells', `${model.shells}${genus}`]] : []),
     ]
     $('title-block').replaceChildren(...rows.flatMap(([term, value]) => [element('dt', { textContent: t(term) }), element('dd', { textContent: value })]))
   }

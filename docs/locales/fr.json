@@ -22,6 +22,8 @@
   "sample.pentachoron": "Pentachore",
   "sample.hollow-cube": "Cube creux",
   "sample.penteract": "Penteract",
+  "sample.donut": "Donut",
+  "sample.hexeract": "Hexeract",
 
   "petrie.title": "Vue de Petrie",
   "petrie.caption": "Les axes sont répartis régulièrement sur un demi-tour, comme un dessin isométrique répartit les trois siens.",
@@ -49,7 +51,8 @@
   "block.euler": "Caractéristique d’Euler",
   "block.viewsValue": "{count} vues de coordonnées + 1 vue de Petrie",
   "block.item": "{count} {unit}",
-  "block.shells": { "one": " ({count} coque fermée)", "other": " ({count} coques fermées)" },
+  "block.shells": "Coques",
+  "block.genus": " (genre {genus})",
   "block.untitled": "Sans titre",
 
   "footer.normals": "Les traits ocre sont les normales. Ils montrent de quel côté chaque bord est tourné : à l’opposé du solide, donc vers l’intérieur du vide dans le cube creux. Chaque exemple suit la [règle d’orientation].",
