@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HyperGeoJSON Viewer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Polytopes of any dimension from HyperGeoJSON, drawn as linked orthographic views.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono&family=Michroma&display=swap">
+<style>
+  /* Layout: a drawing sheet. The pictorial view sits beside a triangular multi-view drawing,
+     and a title block closes the sheet. Light is a whiteprint, dark is a blueprint. */
+  :root {
+    --paper: #f2f5f9;
+    --sheet: #ffffff;
+    --ink: #1c3d72;
+    --faint: #9fb2cc;
+    --rule: #cfd9e6;
+    --muted: #55688a;
+    --accent: #c4372a;
+    --normal: #a5620b;
+    --font-display: "Michroma", "Eurostile", "Arial Narrow", sans-serif;
+    --font-body: "B612", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "B612 Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
+      --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
+    --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--font-body); }
+  .sheet {
+    max-width: 1180px; margin: 0 auto; display: grid; gap: 22px;
+    padding-block: 28px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .masthead h1 { margin: 0; font: 400 clamp(1.35rem, 0.9rem + 2vw, 2rem) var(--font-display); letter-spacing: 0.05em; text-wrap: balance; }
+  .masthead p { margin: 8px 0 0; max-width: 64ch; color: var(--muted); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; }
+  .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .group-label { font: 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 2px; }
+  button, .file-button {
+    font: 0.85rem/1 var(--font-body); color: var(--ink); background: var(--sheet);
+    border: 1px solid var(--rule); border-radius: 2px; padding: 8px 11px; cursor: pointer;
+  }
+  button:hover, .file-button:hover { border-color: var(--ink); }
+  button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+  .plane { font-family: var(--font-mono); min-width: 2.6em; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; cursor: pointer; }
+  .check input { accent-color: var(--normal); width: 16px; height: 16px; margin: 0; }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .drawing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+  figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+  figcaption { font: 0.76rem/1.45 var(--font-mono); color: var(--muted); }
+  figcaption b { font-weight: 400; color: var(--ink); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px; }
+  canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 1; background: var(--sheet); border: 1px solid var(--rule); touch-action: pan-y; cursor: crosshair; }
+  .views { display: grid; grid-template-columns: auto repeat(var(--columns, 3), minmax(0, 1fr)); gap: 6px; }
+  .axis { font: 0.8rem var(--font-mono); color: var(--muted); place-self: center; padding: 0 4px; }
+
+  .details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 22px; align-items: start; }
+  .details h2 { margin: 0 0 8px; font: 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .facets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .facets button { font-family: var(--font-mono); font-size: 0.78rem; padding: 6px 8px; }
+  .readout { margin: 12px 0 0; min-height: 3em; font: 0.82rem/1.5 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .readout strong { color: var(--accent); font-weight: 400; }
+  .status { margin: 0; font-size: 0.85rem; color: var(--accent); }
+
+  .title-block { display: grid; grid-template-columns: auto minmax(0, 1fr); margin: 0; border: 1.5px solid var(--ink); background: var(--sheet); font-size: 0.86rem; }
+  .title-block dt, .title-block dd { margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
+  .title-block dt { font: 0.7rem/1.9 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); border-right: 1px solid var(--rule); }
+  .title-block dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .title-block > :nth-last-child(-n + 2) { border-bottom: 0; }
+
+  footer { display: grid; gap: 6px; max-width: 72ch; font-size: 0.85rem; color: var(--muted); }
+  footer a { color: var(--ink); }
+  .swatch { display: inline-block; width: 0.9em; height: 2px; vertical-align: middle; margin-right: 4px; }
+
+  @media (max-width: 860px) {
+    .drawing, .details { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header class="masthead">
+    <h1>HyperGeoJSON</h1>
+    <p>Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.</p>
+  </header>
+
+  <nav class="controls" aria-label="Drawing controls">
+    <div class="group" role="group" aria-labelledby="samples-label">
+      <span class="group-label" id="samples-label">Sample</span>
+      <button type="button" id="sample-tesseract" data-sample="tesseract">Tesseract</button>
+      <button type="button" id="sample-pentachoron" data-sample="pentachoron">5-cell</button>
+      <button type="button" id="sample-hollow-cube" data-sample="hollow-cube">Hollow cube</button>
+      <button type="button" id="sample-penteract" data-sample="penteract">Penteract</button>
+      <label class="file-button" for="file">Open file…</label>
+      <input class="visually-hidden" type="file" id="file" accept=".json,.geojson,application/json,application/geo+json">
+    </div>
+    <div class="group" role="group" aria-label="Motion">
+      <button type="button" id="play">Pause</button>
+      <button type="button" id="align">Align axes</button>
+      <label class="check" for="normals"><input type="checkbox" id="normals" checked> Normals</label>
+    </div>
+    <div class="group" role="group" aria-labelledby="planes-label">
+      <span class="group-label" id="planes-label">Turn in</span>
+      <span class="group" id="planes"></span>
+    </div>
+  </nav>
+  <p class="status" id="status" role="status" hidden></p>
+
+  <section class="drawing" aria-label="Drawing">
+    <figure>
+      <canvas id="petrie" role="img" aria-label="Petrie view"></canvas>
+      <figcaption><b>Petrie view</b>Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.</figcaption>
+    </figure>
+    <figure id="multiview">
+      <div class="views" id="views"></div>
+      <figcaption><b>Coordinate views</b>Views in a column share their horizontal axis, views in a row their vertical axis.</figcaption>
+    </figure>
+  </section>
+
+  <section class="details">
+    <div>
+      <h2 id="facets-heading">Cells</h2>
+      <div class="facets" id="facets"></div>
+      <p class="readout" id="readout" aria-live="polite"></p>
+    </div>
+    <dl class="title-block" id="title-block" aria-label="Title block"></dl>
+  </section>
+
+  <footer>
+    <p><span class="swatch" style="background: var(--normal)"></span>Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow cube. Every sample follows the <a href="https://github.com/kamataryo/types__hyper-geojson#orientation">orientation rule</a>.</p>
+    <p>Drop any HyperGeoJSON file on the page to draw it. Types and source: <a href="https://github.com/kamataryo/types__hyper-geojson">kamataryo/types__hyper-geojson</a>.</p>
+  </footer>
+</main>
+
+<script type="module">
+  import { read, planes, Rotation, coordinateView, petrieView, draw, vertexAt, axisName, facetName } from './renderer.js'
+
+  const SAMPLES = ['tesseract', 'pentachoron', 'hollow-cube', 'penteract']
+  const SPEED = 0.35 // radians per second
+  const $ = id => document.getElementById(id)
+  const plural = word => word === 'vertex' ? 'vertices' : `${word}s`
+  const format = x => Math.abs(x) < 5e-7 ? '0' : String(+x.toFixed(3))
+
+  const state = {
+    model: null, rotation: null, views: [], active: new Set(),
+    playing: !matchMedia('(prefers-reduced-motion: reduce)').matches,
+    normals: true, hoverVertex: null, hoverFacet: null, pinnedFacet: null,
+  }
+  let colors = {}
+
+  function readColors() {
+    const style = getComputedStyle(document.documentElement), get = name => style.getPropertyValue(name).trim()
+    colors = { ink: get('--ink'), faint: get('--faint'), accent: get('--accent'), normal: get('--normal') }
+  }
+
+  // ---- drawing ----
+
+  let pending = false
+  function redraw() {
+    if (pending) return
+    pending = true
+    requestAnimationFrame(() => {
+      pending = false
+      const { model, rotation } = state
+      if (!model) return
+      const view = { highlightFacet: state.pinnedFacet ?? state.hoverFacet, hoverVertex: state.hoverVertex, normals: state.normals }
+      for (const { canvas, view: v } of state.views) draw(canvas, model, rotation, v, view, colors)
+    })
+  }
+
+  const turn = angle => { for (const key of state.active) { const [i, j] = key.split(',').map(Number); state.rotation.turn(i, j, angle) } }
+
+  let last = null
+  function tick(time) {
+    if (!state.playing) { last = null; return }
+    if (last != null) turn(Math.min(0.05, (time - last) / 1000) * SPEED)
+    last = time
+    redraw()
+    requestAnimationFrame(tick)
+  }
+  function setPlaying(playing) {
+    state.playing = playing
+    $('play').textContent = playing ? 'Pause' : 'Play'
+    if (playing) requestAnimationFrame(tick)
+  }
+
+  // ---- pointing ----
+
+  let drag = null
+  function attach(canvas, currentView) {
+    const at = e => { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top] }
+    const hover = (x, y) => {
+      if (!state.model) return
+      const v = vertexAt(canvas, state.model, state.rotation, currentView(), x, y)
+      if (v !== state.hoverVertex) { state.hoverVertex = v; describe(); redraw() }
+    }
+    canvas.addEventListener('pointerdown', e => {
+      const [x, y] = at(e)
+      drag = { id: e.pointerId, x }
+      canvas.setPointerCapture(e.pointerId)
+      hover(x, y)
+    })
+    canvas.addEventListener('pointermove', e => {
+      const [x, y] = at(e)
+      if (drag?.id === e.pointerId) { turn((x - drag.x) * 0.01); drag.x = x; redraw(); return }
+      hover(x, y)
+    })
+    const end = e => { if (drag?.id === e.pointerId) drag = null }
+    canvas.addEventListener('pointerup', end)
+    canvas.addEventListener('pointercancel', end)
+    canvas.addEventListener('pointerleave', () => { if (!drag && state.hoverVertex != null) { state.hoverVertex = null; describe(); redraw() } })
+  }
+
+  function describe() {
+    const { model } = state, out = $('readout')
+    if (state.hoverVertex != null) {
+      const k = state.hoverVertex, p = model.vertices[k]
+      out.innerHTML = `<strong>vertex ${k + 1}</strong> (${p.map(format).join(', ')})<br>${p.map((x, i) => `${axisName(i)} ${format(x)}`).join(' · ')}`
+      return
+    }
+    const f = model.facets[state.pinnedFacet ?? state.hoverFacet]
+    if (f) {
+      const k = model.facets.indexOf(f)
+      out.innerHTML = `<strong>${facetName(f.dimension)} ${k + 1}</strong> ${f.vertices.length} vertices, ${f.edges.length} edges` +
+        (f.normal ? `<br>normal (${f.normal.map(format).join(', ')})` : '')
+      return
+    }
+    out.textContent = 'Point at a vertex to follow it through every view. Point at a facet above to pick it out.'
+  }
+
+  // ---- building the sheet for a model ----
+
+  function defaultPlanes(n) {
+    if (n < 2) return []
+    if (n === 2) return [[0, 1]]
+    if (n === 3) return [[0, 2]]
+    return [[0, n - 1], [1, 2]]
+  }
+
+  function show(model) {
+    const n = model.dimension
+    Object.assign(state, { model, rotation: new Rotation(n), hoverVertex: null, hoverFacet: null, pinnedFacet: null })
+    for (const [i, j] of planes(n)) state.rotation.turn(i, j, 0.25)
+    state.active = new Set(defaultPlanes(n).map(p => p.join(',')))
+
+    // the large view
+    const petrie = { canvas: $('petrie'), view: petrieView(n) }
+    state.views = [petrie]
+
+    // the coordinate views, as a triangle: the view of axes (i, j) sits in column i and row j
+    const grid = $('views')
+    grid.replaceChildren()
+    grid.style.setProperty('--columns', Math.max(1, n - 1))
+    $('multiview').hidden = n < 2
+    for (let j = 1; j < n; j++) {
+      const label = Object.assign(document.createElement('span'), { className: 'axis', textContent: axisName(j) })
+      label.style.gridArea = `${j} / 1`
+      grid.append(label)
+      for (let i = 0; i < j; i++) {
+        const canvas = document.createElement('canvas')
+        canvas.setAttribute('role', 'img')
+        canvas.setAttribute('aria-label', `View of axes ${axisName(i)} and ${axisName(j)}`)
+        canvas.style.gridArea = `${j} / ${i + 2}`
+        grid.append(canvas)
+        const view = coordinateView(i, j)
+        attach(canvas, () => view)
+        state.views.push({ canvas, view })
+      }
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const label = Object.assign(document.createElement('span'), { className: 'axis', textContent: axisName(i) })
+      label.style.gridArea = `${n} / ${i + 2}`
+      grid.append(label)
+    }
+
+    // the planes to turn in
+    const chips = $('planes')
+    chips.replaceChildren(...planes(n).map(([i, j]) => {
+      const key = `${i},${j}`, button = document.createElement('button')
+      Object.assign(button, { type: 'button', className: 'plane', id: `plane-${axisName(i)}${axisName(j)}`, textContent: `${axisName(i)}${axisName(j)}` })
+      button.setAttribute('aria-pressed', state.active.has(key))
+      button.addEventListener('click', () => {
+        state.active.has(key) ? state.active.delete(key) : state.active.add(key)
+        button.setAttribute('aria-pressed', state.active.has(key))
+      })
+      return button
+    }))
+
+    // the facets
+    const dims = new Set(model.facets.map(f => f.dimension))
+    $('facets-heading').textContent = dims.size === 1 ? plural(facetName([...dims][0])) : 'Facets'
+    $('facets-heading').parentElement.hidden = !model.facets.length
+    $('facets').replaceChildren(...model.facets.map((f, k) => {
+      const button = document.createElement('button')
+      Object.assign(button, { type: 'button', id: `facet-${k + 1}`, textContent: `${facetName(f.dimension)} ${k + 1}` })
+      button.setAttribute('aria-pressed', 'false')
+      const enter = () => { state.hoverFacet = k; describe(); redraw() }
+      const leave = () => { if (state.hoverFacet === k) state.hoverFacet = null; describe(); redraw() }
+      button.addEventListener('pointerenter', enter); button.addEventListener('focus', enter)
+      button.addEventListener('pointerleave', leave); button.addEventListener('blur', leave)
+      button.addEventListener('click', () => {
+        state.pinnedFacet = state.pinnedFacet === k ? null : k
+        for (const b of $('facets').children) b.setAttribute('aria-pressed', b === button && state.pinnedFacet === k)
+        describe(); redraw()
+      })
+      return button
+    }))
+
+    // the title block
+    const names = model.fVector.map((count, k) => `${count} ${count === 1 ? facetName(k) : plural(facetName(k))}`)
+    const shells = model.euler != null && n % 2 === 1 && model.euler > 0 ? ` (${model.euler / 2} closed shell${model.euler === 2 ? '' : 's'})` : ''
+    const rows = [
+      ['Object', model.name ?? 'Untitled'],
+      ['Type', model.types.join(', ')],
+      ['Dimension', n],
+      ['Views', `${planes(n).length} coordinate + 1 Petrie`],
+      ['Boundary', names.join(' · ')],
+      ...(model.euler != null ? [['Euler characteristic', `${model.euler}${shells}`]] : []),
+    ]
+    $('title-block').replaceChildren(...rows.flatMap(([term, value]) => [
+      Object.assign(document.createElement('dt'), { textContent: term }),
+      Object.assign(document.createElement('dd'), { textContent: value }),
+    ]))
+
+    describe()
+    redraw()
+  }
+
+  // ---- loading ----
+
+  function status(message) { $('status').textContent = message ?? ''; $('status').hidden = !message }
+
+  function load(object, sample = null) {
+    try { show(read(object)); status(null) } catch (error) { status(error.message); return }
+    for (const name of SAMPLES) $(`sample-${name}`).setAttribute('aria-pressed', name === sample)
+    current = sample
+    if (sample) try { history.replaceState(null, '', `#${sample}`) } catch {}
+  }
+
+  async function loadSample(name) {
+    try {
+      const response = await fetch(`samples/${name}.json`)
+      if (!response.ok) throw new Error(`Could not load the ${name} sample (HTTP ${response.status}).`)
+      load(await response.json(), name)
+    } catch (error) { status(error.message) }
+  }
+
+  async function loadFile(file) {
+    try { load(JSON.parse(await file.text())) }
+    catch (error) { status(`${file.name} could not be read as JSON: ${error.message}`) }
+  }
+
+  for (const name of SAMPLES) $(`sample-${name}`).addEventListener('click', () => loadSample(name))
+  $('file').addEventListener('change', e => { const [file] = e.target.files; if (file) loadFile(file); e.target.value = '' })
+  document.addEventListener('dragover', e => e.preventDefault())
+  document.addEventListener('drop', e => { e.preventDefault(); const [file] = e.dataTransfer.files; if (file) loadFile(file) })
+
+  $('play').addEventListener('click', () => setPlaying(!state.playing))
+  $('align').addEventListener('click', () => { state.rotation?.align(); redraw() })
+  $('normals').addEventListener('change', e => { state.normals = e.target.checked; redraw() })
+
+  attach($('petrie'), () => state.views[0].view)
+  readColors()
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); redraw() })
+  new MutationObserver(() => { readColors(); redraw() }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  new ResizeObserver(() => redraw()).observe(document.querySelector('.drawing'))
+  document.fonts?.ready.then(() => redraw())
+
+  let current = null
+  const fromHash = () => { const name = location.hash.slice(1); return SAMPLES.includes(name) ? name : null }
+  addEventListener('hashchange', () => { const name = fromHash(); if (name && name !== current) loadSample(name) })
+  loadSample(fromHash() ?? 'tesseract')
+  setPlaying(state.playing)
+</script>
+</body>
+</html>

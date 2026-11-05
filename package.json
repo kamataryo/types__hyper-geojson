@@ -4,7 +4,8 @@
   "description": "",
   "types": "index.d.ts",
   "scripts": {
-    "test": "ts-node index.test.ts"
+    "test": "ts-node index.test.ts",
+    "samples": "node scripts/build-samples.mjs"
   },
   "keywords": [],
   "author": "",
