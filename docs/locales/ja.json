@@ -66,6 +66,8 @@
   "sample.moebius-strip": "メビウスの輪",
   "sample.klein-bottle": "クラインの壺",
   "sample.klein-bottle-4d": "クラインの壺",
+  "sample.torus-4d": "4次元トーラス",
+  "sample.chain-4d": "4次元トーラスの鎖",
 
   "petrie.title": "ペトリー図",
   "pip.back": "図に戻る",

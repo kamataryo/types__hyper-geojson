@@ -66,6 +66,8 @@
   "sample.moebius-strip": "Ruban de Möbius",
   "sample.klein-bottle": "Bouteille de Klein",
   "sample.klein-bottle-4d": "Bouteille de Klein",
+  "sample.torus-4d": "Tore 4D",
+  "sample.chain-4d": "Chaîne de tores 4D",
 
   "petrie.title": "Vue de Petrie",
   "pip.back": "Revenir au dessin",

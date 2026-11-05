@@ -261,6 +261,42 @@ function cliffordTorus(n = 16) {
   return grid(n, n, (i, j) => { const a = 2 * Math.PI * (i % n) / n, b = 2 * Math.PI * (j % n) / n; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)].map(x => x / Math.SQRT2) })
 }
 
+// A solid in the half-space c > 0 of 3-space, spun once around the plane c = 0: each point (a, b, c) sweeps
+// the circle (a, b, c cos t, c sin t), here a regular polygon of s sides. Each quad of the surface sweeps a ring
+// of s cells, each the frustum between two copies of the quad: a hexahedron, flat because both copies lie in one
+// hyperplane. Each cell is the unit cube on the grid of (i, j, k), so it shares each face with its neighbour.
+// The faces of the 3D surface, p(i, j), must come from a grid whose indices wrap, so the seams meet exactly.
+function spun(p, n, m, s) {
+  const at = (i, j, k) => { const [a, b, c] = p(i % n, j % m), t = 2 * Math.PI * (k % s) / s; return [a, b, c * Math.cos(t), c * Math.sin(t)] }
+  const box = cube(3), cells = []
+  for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) for (let k = 0; k < s; k++)
+    cells.push(box.map(face => face.map(ring => ring.map(([di, dj, dk]) => at(i + di, j + dj, k + dk)))))
+  return volume(cells, [0, 0, 0, 0]) > 0 ? cells : reversed(cells)
+}
+
+// A torus in 3-space: around the z axis, n x m, as in torus() but as a function of the indices
+const torusAt = (n, m, R, r) => (i, j) => { const u = 2 * Math.PI * i / n, v = 2 * Math.PI * j / m; return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)] }
+const turnedX = (t, [x, y, z]) => [x, y * Math.cos(t) - z * Math.sin(t), y * Math.sin(t) + z * Math.cos(t)]
+
+// A torus in four dimensions, whose boundary is the 3-torus: a solid torus lifted off the plane z = 0 and spun around it.
+// Its core is the Clifford-style torus of a circle of radius R in xy times a circle of radius h in zw;
+// its boundary, ((R + r cos v) cos u, (R + r cos v) sin u, (h + r sin v) cos t, (h + r sin v) sin t), runs three ways around.
+function torus4(n = 12, m = 6, s = 8, R = 1.6, h = 1.6, r = 0.5) {
+  const p = torusAt(n, m, R, r)
+  return spun((i, j) => { const [a, b, c] = p(i, j); return [a, b, c + h] }, n, m, s)
+}
+
+// A chain of two 4D tori. In four dimensions two circles cannot link: one slips past the other through the fourth axis.
+// So the 3D chain is lifted off the plane z = 0 and spun around it, and each link becomes a solid whose core is a torus.
+// The spin keeps them linked, for the group of loops around them is that of the 3D chain, not that of two apart.
+// Both links lean 45 degrees, one each way, so that the spin turns them into two copies of one shape.
+function chain4(n = 10, m = 6, s = 8, R = 1.5, h = 2.2, r = 0.4) {
+  const p = torusAt(n, m, R, r), lean = Math.PI / 4
+  const first = (i, j) => { const [a, b, c] = turnedX(lean, p(i, j)); return [a, b, c + h] }
+  const second = (i, j) => { const [x, y, z] = p(i, j), [a, b, c] = turnedX(-lean, [x, z, -y]); return [a + R, b, c + h] }
+  return [spun(first, n, m, s), spun(second, n, m, s)]
+}
+
 // The n-n duoprism: a regular n-gon times a regular n-gon
 function duoprism(n) {
   const gon = Array.from({ length: n }, (_, i) => [Math.cos(2 * Math.PI * i / n), Math.sin(2 * Math.PI * i / n)])
@@ -346,6 +382,10 @@ function surface(polygons) {
 // Samples
 // ---------------------------------------------------------------------------
 
+// The 4D volume of a solid spun into s sides: each point at height c sweeps a polygon of area (s / 2) sin(2 pi / s) c^2,
+// so the volume is s sin(2 pi / s) times the integral of c, which is the 3D volume times the height h of its centroid
+const spunVolume = (s, h, solid) => s * Math.sin(2 * Math.PI / s) * h * volume(solid, [0, 0, 0])
+
 const hyper = (name, type, coordinates) => ({ type: 'HyperFeature', properties: { name }, geometry: { type, coordinates } })
 const feature = (name, geometry) => ({ type: 'Feature', properties: { name }, geometry })
 
@@ -382,6 +422,8 @@ const samples = [
   ['hollow-tesseract', hyper('Hollow tesseract', 'Polychoron', [...cube(4, 0, 3), ...reversed(cube(4, 1, 2))]), { solids: [80] }],
   ['duoprism', hyper('6-6 duoprism', 'Polychoron', duoprism(6)), { solids: [(3 * Math.sqrt(3) / 2) ** 2] }],
   ['clifford-torus', hyper('Clifford torus', 'MultiPolygon', cliffordTorus()), { surface: { euler: 0, closed: true, orientable: true } }],
+  ['torus-4d', hyper('4D torus', 'Polychoron', torus4()), { solids: [spunVolume(8, 1.6, torus(12, 6, 1.6, 0.5))] }],
+  ['chain-4d', hyper('4D chain', 'MultiPolychoron', chain4()), { solids: [spunVolume(8, 2.2, torus(10, 6, 1.5, 0.4)), spunVolume(8, 2.2, torus(10, 6, 1.5, 0.4))] }],
   ['klein-bottle-4d', hyper('Klein bottle', 'MultiPolygon', kleinBottle4()), { surface: KLEIN }],
 
   ['5-simplex', hyper('5-simplex', 'Polytope5', simplex(5)), { solids: [Math.sqrt(6) / 120] }],
@@ -423,6 +465,18 @@ for (const [file, object, expect] of samples) {
       }
       const odd = [...walked.values()].filter(v => v !== 11).length
       if (odd) throw new Error(`${file}: ${odd} edges are not walked exactly once each way`)
+    }
+    // and one dimension up: every face of a polychoron is shared by exactly two cells, which walk its ring opposite ways
+    if (d === 4) {
+      const walked = new Map()
+      for (const cell of m) for (const face of cell) for (const ring of face) {
+        const keys = ring.slice(0, -1).map(q => q.join()), first = keys.indexOf([...keys].sort()[0])
+        const turned = [...keys.slice(first), ...keys.slice(0, first)], way = turned[1] < turned[turned.length - 1]
+        const key = (way ? turned : [turned[0], ...turned.slice(1).reverse()]).join('|')
+        walked.set(key, (walked.get(key) ?? 0) + (way ? 1 : 10))
+      }
+      const odd = [...walked.values()].filter(v => v !== 11).length
+      if (odd) throw new Error(`${file}: ${odd} faces are not shared by two cells walking them opposite ways`)
     }
     report.push(`${d === 2 ? "area" : "volume"} ${a.toPrecision(6)}`)
   }

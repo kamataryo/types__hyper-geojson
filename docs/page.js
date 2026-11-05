@@ -5,7 +5,7 @@ import { Editor, parseJSON } from './editor.js'
 const CATALOG = [
   ['2d', ['two-hole-donut', 'moebius-strip-shadow']],
   ['3d', ['tetrahedron', 'cube', 'octahedron', 'dodecahedron', 'icosahedron', 'truncated-icosahedron', 'rhombic-dodecahedron', 'stella-octangula', 'menger-sponge', 'torus', 'chain', 'moebius-strip', 'klein-bottle']],
-  ['4d', ['pentachoron', 'tesseract', '16-cell', '24-cell', '120-cell', '600-cell', 'hollow-tesseract', 'duoprism', 'clifford-torus', 'klein-bottle-4d']],
+  ['4d', ['pentachoron', 'tesseract', '16-cell', '24-cell', '120-cell', '600-cell', 'hollow-tesseract', 'duoprism', 'clifford-torus', 'torus-4d', 'chain-4d', 'klein-bottle-4d']],
   ['5d', ['5-simplex', '5-orthoplex', 'penteract', 'hexeract']],
 ]
 const SAMPLES = CATALOG.flatMap(([, ids]) => ids)
