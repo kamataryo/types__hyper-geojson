@@ -1,80 +1,72 @@
-// 中空の立方体：一辺 3 の立方体 [0,3]^3 の中心に、一辺 1 の空洞 [1,2]^3 がある
-// 実体の体積は 27 - 1 = 26
+// A cube with a cubic void: the solid [0,3]^3 around the void [1,2]^3, of volume 27 - 1 = 26.
 //
-// 向きの約束（CityJSON などと同じ）：
-//   - 各面のリングは右手の法則で、法線が「実体の外側」を向くように並べる
-//   - 外殻の法線は外向き、空洞を囲む内殻の法線は空洞の中心を向く
+// Every boundary faces away from what it bounds (see "Orientation" in the README):
+// the outer faces point out of the cube, and the faces around the void point into the void.
+// The void needs no nesting level of its own. It is six more faces, facing the other way.
+// Turned outward instead, the same six faces would make a second solid inside the first.
 
 import type HyperGeoJSON from '../index.d.ts'
 import assert from 'node:assert'
 
-type Position = HyperGeoJSON.HyperPosition
-type Face = Position[][] // = Polygon の coordinates（外周リング + 穴）
-type Shell = Face[]      // 閉じた曲面 = 面の集まり
-
-const outerShell: Shell = [
-  [[[0, 0, 3], [0, 3, 3], [0, 3, 0], [0, 0, 0], [0, 0, 3]]], // x = 0
-  [[[3, 0, 0], [3, 3, 0], [3, 3, 3], [3, 0, 3], [3, 0, 0]]], // x = 3
-  [[[3, 0, 0], [3, 0, 3], [0, 0, 3], [0, 0, 0], [3, 0, 0]]], // y = 0
-  [[[0, 3, 0], [0, 3, 3], [3, 3, 3], [3, 3, 0], [0, 3, 0]]], // y = 3
-  [[[0, 3, 0], [3, 3, 0], [3, 0, 0], [0, 0, 0], [0, 3, 0]]], // z = 0
-  [[[0, 0, 3], [3, 0, 3], [3, 3, 3], [0, 3, 3], [0, 0, 3]]], // z = 3
-]
-
-const innerShell: Shell = [
-  [[[1, 1, 1], [1, 2, 1], [1, 2, 2], [1, 1, 2], [1, 1, 1]]], // x = 1
-  [[[2, 1, 2], [2, 2, 2], [2, 2, 1], [2, 1, 1], [2, 1, 2]]], // x = 2
-  [[[1, 1, 1], [1, 1, 2], [2, 1, 2], [2, 1, 1], [1, 1, 1]]], // y = 1
-  [[[2, 2, 1], [2, 2, 2], [1, 2, 2], [1, 2, 1], [2, 2, 1]]], // y = 2
-  [[[1, 1, 1], [2, 1, 1], [2, 2, 1], [1, 2, 1], [1, 1, 1]]], // z = 1
-  [[[1, 2, 2], [2, 2, 2], [2, 1, 2], [1, 1, 2], [1, 2, 2]]], // z = 2
-]
-
-// ---------------------------------------------------------------------------
-// 案 A：今の型（Polyhedron = 面の配列）に 12 面をそのまま並べる
-//   型は通る。ただし「どの面がどの殻に属するか」はデータに書かれていない。
-//   読む側が面のつながりと向きから推測するしかない。
-// ---------------------------------------------------------------------------
-export const hollowCubeA: HyperGeoJSON.Polyhedron = {
+export const hollowCube: HyperGeoJSON.Polyhedron = {
   type: 'Polyhedron',
-  coordinates: [...outerShell, ...innerShell],
+  coordinates: [
+    // outside, facing out
+    [[[0, 0, 3], [0, 3, 3], [0, 3, 0], [0, 0, 0], [0, 0, 3]]],
+    [[[3, 0, 0], [3, 3, 0], [3, 3, 3], [3, 0, 3], [3, 0, 0]]],
+    [[[3, 0, 0], [3, 0, 3], [0, 0, 3], [0, 0, 0], [3, 0, 0]]],
+    [[[0, 3, 0], [0, 3, 3], [3, 3, 3], [3, 3, 0], [0, 3, 0]]],
+    [[[0, 3, 0], [3, 3, 0], [3, 0, 0], [0, 0, 0], [0, 3, 0]]],
+    [[[0, 0, 3], [3, 0, 3], [3, 3, 3], [0, 3, 3], [0, 0, 3]]],
+    // around the void, facing in
+    [[[1, 1, 1], [1, 2, 1], [1, 2, 2], [1, 1, 2], [1, 1, 1]]],
+    [[[2, 1, 2], [2, 2, 2], [2, 2, 1], [2, 1, 1], [2, 1, 2]]],
+    [[[1, 1, 1], [1, 1, 2], [2, 1, 2], [2, 1, 1], [1, 1, 1]]],
+    [[[2, 2, 1], [2, 2, 2], [1, 2, 2], [1, 2, 1], [2, 2, 1]]],
+    [[[1, 1, 1], [2, 1, 1], [2, 2, 1], [1, 2, 1], [1, 1, 1]]],
+    [[[1, 2, 2], [2, 2, 2], [2, 1, 2], [1, 1, 2], [1, 2, 2]]],
+  ],
 }
 
 // ---------------------------------------------------------------------------
-// 案 B：殻（shell）の段を 1 つ足す
-//   Polygon が [外周リング, ...穴のリング] であるのと同じ形で、
-//   [外殻, ...空洞の殻] と並べる。
+// Check: how many times the faces wind around a point, and the volume they enclose
 // ---------------------------------------------------------------------------
-// ※ HyperGeoJsonObject の type は既存の型名の union に固定されていて継承できないので、bbox を直接書く
-export interface Solid {
-  type: 'Solid',
-  bbox?: HyperGeoJSON.HyperBBox,
-  coordinates: Shell[], // = Position[][][][]
-}
 
-export const hollowCubeB: Solid = {
-  type: 'Solid',
-  coordinates: [outerShell, innerShell],
-}
+type Position = HyperGeoJSON.HyperPosition
+const sub = (a: Position, b: Position) => a.map((x, i) => x - b[i])
+const dot = (a: Position, b: Position) => a.reduce((s, x, i) => s + x * b[i], 0)
+const cross = (a: Position, b: Position) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+const length = (a: Position) => Math.hypot(...a)
 
-// ---------------------------------------------------------------------------
-// 検算：発散定理による符号付き体積。向きが正しければ外殻は +27、内殻は -1 になる
-// ---------------------------------------------------------------------------
-function signedVolume(shell: Shell): number {
-  let v = 0
-  for (const [ring] of shell) {
-    const a = ring[0]
-    for (let i = 1; i < ring.length - 2; i++) {
-      const b = ring[i], c = ring[i + 1]
-      v += a[0] * (b[1] * c[2] - b[2] * c[1])
-         - a[1] * (b[0] * c[2] - b[2] * c[0])
-         + a[2] * (b[0] * c[1] - b[1] * c[0])
-    }
+// Each face, cut into triangles from its first corner (these faces have no holes)
+function triangles({ coordinates }: HyperGeoJSON.Polyhedron): Position[][] {
+  const result: Position[][] = []
+  for (const [ring] of coordinates) {
+    for (let i = 1; i < ring.length - 2; i++) result.push([ring[0], ring[i], ring[i + 1]])
   }
-  return v / 6
+  return result
 }
 
-const volumes = hollowCubeB.coordinates.map(signedVolume)
-assert.deepStrictEqual(volumes, [27, -1])
-assert.strictEqual(volumes.reduce((s, x) => s + x, 0), 26)
-console.log('shell volumes:', volumes, '=> solid volume:', 26)
+// The signed solid angle the faces subtend at the point, in whole turns
+function windingNumber(polyhedron: HyperGeoJSON.Polyhedron, point: Position): number {
+  let solidAngle = 0
+  for (const corners of triangles(polyhedron)) {
+    const [a, b, c] = corners.map(corner => sub(corner, point))
+    const [la, lb, lc] = [a, b, c].map(length)
+    solidAngle += 2 * Math.atan2(dot(a, cross(b, c)), la * lb * lc + dot(a, b) * lc + dot(a, c) * lb + dot(b, c) * la)
+  }
+  return solidAngle / (4 * Math.PI)
+}
+
+function volume(polyhedron: HyperGeoJSON.Polyhedron): number {
+  let v = 0
+  for (const [a, b, c] of triangles(polyhedron)) v += dot(a, cross(b, c)) / 6
+  return v
+}
+
+const near = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`)
+near(windingNumber(hollowCube, [0.5, 0.5, 0.5]), 1) // in the solid
+near(windingNumber(hollowCube, [1.5, 1.5, 1.5]), 0) // in the void
+near(windingNumber(hollowCube, [4, 4, 4]), 0)       // outside
+near(volume(hollowCube), 26)
+console.log('winding numbers 1 / 0 / 0, volume 26')
