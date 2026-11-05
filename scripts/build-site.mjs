@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const SITE = 'https://kamataryo.github.io/types__hyper-geojson/'
+const SITE = 'https://hypergeojson.kamataryo.com/'
 const LOCALES = { en: 'en_US', ja: 'ja_JP', fr: 'fr_FR' }
 const CODES = Object.keys(LOCALES)
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
