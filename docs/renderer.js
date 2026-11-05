@@ -144,7 +144,10 @@ export function read(object) {
   // the edges at each vertex, so pointing at a vertex need not search every edge
   const incident = vertices.map(() => [])
   edges.forEach(([i, j], k) => { incident[i].push(k); incident[j].push(k) })
-  return { name, types, dimension, vertices, edges, incident, facets, fVector, euler, shells, centre, radius }
+  // a normal is drawn about as long as its facet is wide, so a many-faced solid is not lost under its normals
+  const normals = facets.filter(f => f.normal).length
+  const tick = 0.22 * radius * Math.min(1, (12 / Math.max(1, normals)) ** (1 / Math.max(1, dimension - 1)))
+  return { name, types, dimension, vertices, edges, incident, facets, fVector, euler, shells, centre, radius, tick }
 }
 
 // ---------------------------------------------------------------------------
@@ -208,7 +211,7 @@ function turned(model, rotation) {
     c = {
       rotation, version: rotation.version,
       vertices: model.vertices.map(turn),
-      ticks: model.facets.filter(f => f.normal).map(f => [turn(f.centre), turn(f.centre.map((x, k) => x + f.normal[k] * model.radius * 0.22))]),
+      ticks: model.facets.filter(f => f.normal).map(f => [turn(f.centre), turn(f.centre.map((x, k) => x + f.normal[k] * model.tick))]),
     }
     turnedCache.set(model, c)
   }

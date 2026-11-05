@@ -161,30 +161,42 @@ function rect(k, at, facing, [u0, u1], [v0, v1]) {
   if (facing < 0) corners.reverse()
   return [...corners, corners[0]]
 }
-const turned = ring => [ring[0], ...ring.slice(1, -1).reverse(), ring[0]]
 
-// A square donut: the ring of eight unit cubes around the hole [1,2]^2, one unit high.
-// Its top and bottom are polygons with a hole, written as in GeoJSON.
-const donut = () => [
-  [rect(2, 1, +1, [0, 3], [0, 3]), turned(rect(2, 1, +1, [1, 2], [1, 2]))], // top: the hole runs the other way
-  [rect(2, 0, -1, [0, 3], [0, 3]), turned(rect(2, 0, -1, [1, 2], [1, 2]))], // bottom
-  [rect(0, 0, -1, [0, 3], [0, 1])], [rect(0, 3, +1, [0, 3], [0, 1])],        // outside
-  [rect(1, 0, -1, [0, 1], [0, 3])], [rect(1, 3, +1, [0, 1], [0, 3])],
-  [rect(0, 1, +1, [1, 2], [0, 1])], [rect(0, 2, -1, [1, 2], [0, 1])],        // around the hole, facing into it
-  [rect(1, 1, +1, [0, 1], [1, 2])], [rect(1, 2, -1, [0, 1], [1, 2])],
-]
+// A torus: a circle of radius r swept around a circle of radius R, as n x n flat quads.
+// Each ring runs first around the axis, then around the tube, which turns it to face outward.
+// Indices wrap with % n, so the seam meets itself exactly.
+function torus(n = 16, R = 2, r = 0.8) {
+  const p = (i, j) => { const u = 2 * Math.PI * (i % n) / n, v = 2 * Math.PI * (j % n) / n; return [(R + r * Math.cos(v)) * Math.cos(u), (R + r * Math.cos(v)) * Math.sin(u), r * Math.sin(v)] }
+  const quads = []
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) quads.push([[p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), p(i, j)]])
+  return quads
+}
 
-// The first step of the Menger sponge: a 3x3x3 block without its centre and the centres of its faces.
-// Its boundary is every face of a small cube that does not touch another small cube.
-function menger() {
-  const keep = (x, y, z) => [x, y, z].every(c => c >= 0 && c <= 2) && [x, y, z].filter(c => c === 1).length < 2
+// A donut with two holes, in the plane: a Cassini oval around two round holes.
+// The outline runs counterclockwise and the holes clockwise, as GeoJSON asks.
+function twoHoleDonut(outline = 256, hole = 128) {
+  const a = 1, b = 1.15 // b > a gives the peanut-shaped oval around the foci (±a, 0)
+  const loop = (n, at) => { const ring = Array.from({ length: n }, (_, k) => at(2 * Math.PI * k / n)); return [...ring, ring[0]] }
+  const outer = loop(outline, t => { const r = Math.sqrt(a * a * Math.cos(2 * t) + Math.sqrt(b ** 4 - a ** 4 * Math.sin(2 * t) ** 2)); return [r * Math.cos(t), r * Math.sin(t)] })
+  const holes = [-a, a].map(cx => loop(hole, t => [cx + 0.35 * Math.cos(-t), 0.35 * Math.sin(-t)]))
+  return [outer, ...holes]
+}
+
+// The Menger sponge after `level` steps: a block of 3^level small cubes, from which each step takes the centre
+// and the centres of the faces of every block that is left. The sponge itself, after infinitely many steps,
+// has infinitely many faces and no volume, so only a step on the way can be written down.
+// The boundary is every face of a small cube that does not touch another small cube.
+function menger(level) {
+  const size = 3 ** level
+  const keep = c => c.every(x => x >= 0 && x < size) &&
+    Array.from({ length: level }, (_, l) => c.filter(x => Math.floor(x / 3 ** l) % 3 === 1).length < 2).every(Boolean)
   const faces = []
-  for (let x = 0; x < 3; x++) for (let y = 0; y < 3; y++) for (let z = 0; z < 3; z++) {
-    if (!keep(x, y, z)) continue
+  for (let x = 0; x < size; x++) for (let y = 0; y < size; y++) for (let z = 0; z < size; z++) {
     const c = [x, y, z]
+    if (!keep(c)) continue
     for (let k = 0; k < 3; k++) for (const side of [0, 1]) {
       const next = [...c]; next[k] += side ? 1 : -1
-      if (keep(...next)) continue
+      if (keep(next)) continue
       const [u, v] = [(k + 1) % 3, (k + 2) % 3]
       faces.push([rect(k, c[k] + side, side ? 1 : -1, [c[u], c[u] + 1], [c[v], c[v] + 1])])
     }
@@ -194,7 +206,7 @@ function menger() {
 
 // The flat torus in four dimensions, as a mesh of n x n squares (a surface, not a solid)
 function cliffordTorus(n = 16) {
-  const p = (i, j) => { const a = 2 * Math.PI * i / n, b = 2 * Math.PI * j / n; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)].map(x => x / Math.SQRT2) }
+  const p = (i, j) => { const a = 2 * Math.PI * (i % n) / n, b = 2 * Math.PI * (j % n) / n; return [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)].map(x => x / Math.SQRT2) }
   const quads = []
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) quads.push([[p(i, j), p(i + 1, j), p(i + 1, j + 1), p(i, j + 1), p(i, j)]])
   return quads
@@ -274,7 +286,7 @@ const tetrahedron = [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]]
 const samples = [
   // file, the object, and what to check: expected volumes of the solids (or areas of the polygons) in it
   ['null-island', nullIsland, { polygons: [null] }],
-  ['square-with-a-hole', feature('Square with a hole', { type: 'Polygon', coordinates: [[[0, 0], [3, 0], [3, 3], [0, 3], [0, 0]], [[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]] }), { polygons: [8] }],
+  ['two-hole-donut', feature('Two-hole donut', { type: 'Polygon', coordinates: twoHoleDonut() }), { polygons: [null] }],
 
   ['tetrahedron', hyper('Tetrahedron', 'Polyhedron', convex(tetrahedron)), { solids: [8 / 3] }],
   ['cube', hyper('Cube', 'Polyhedron', cube(3)), { solids: [1] }],
@@ -287,9 +299,9 @@ const samples = [
     .flatMap(p => [p, [p[1], p[2], p[0]], [p[2], p[0], p[1]]]).flatMap(signs))), { solids: [(125 + 43 * Math.sqrt(5)) / 4 * 8] }],
   ['rhombic-dodecahedron', hyper('Rhombic dodecahedron', 'Polyhedron', convex([...signs([1, 1, 1]), ...permutations([2, 0, 0]).flatMap(signs)].filter((p, i, all) => all.findIndex(q => q.join() === p.join()) === i))), { solids: [16] }],
   ['stella-octangula', hyper('Stella octangula', 'MultiPolyhedron', [convex(tetrahedron), convex(tetrahedron.map(p => p.map(x => -x)))]), { solids: [8 / 3, 8 / 3] }],
-  ['menger-sponge', hyper('Menger sponge', 'Polyhedron', menger()), { solids: [20] }],
+  ['menger-sponge', hyper('Menger sponge, level 2', 'Polyhedron', menger(2)), { solids: [400] }],
   ['hollow-cube', hyper('Hollow cube', 'Polyhedron', [...cube(3, 0, 3), ...reversed(cube(3, 1, 2))]), { solids: [26] }],
-  ['donut', hyper('Donut', 'Polyhedron', donut()), { solids: [8] }],
+  ['torus', hyper('Torus', 'Polyhedron', torus()), { solids: [null] }],
 
   ['pentachoron', hyper('5-cell', 'Polychoron', simplex(4)), { solids: [Math.sqrt(5) / 24] }],
   ['tesseract', hyper('Tesseract', 'Polychoron', cube(4)), { solids: [1] }],
@@ -332,10 +344,20 @@ for (const [file, object, expect] of samples) {
       if (Math.abs(a - b) > 1e-9 * Math.max(1, Math.abs(a))) throw new Error(`${file}: the boundary is twisted (${a} from one point, ${b} from another)`)
       if (a <= 0) throw new Error(`${file}: the boundary faces inward (${a})`)
       if (expected != null && Math.abs(a - expected) > 1e-6 * Math.max(1, expected)) throw new Error(`${file}: ${d === 2 ? 'area' : 'volume'} ${a}, expected ${expected}`)
-      report.push(a.toPrecision(6))
+      // a closed surface: every edge of a solid is walked by exactly two faces, once each way
+      if (d === 3) {
+        const walked = new Map()
+        for (const face of m) for (const ring of face) for (let k = 0; k + 1 < ring.length; k++) {
+          const [p, q] = [ring[k].join(), ring[k + 1].join()], key = p < q ? `${p}|${q}` : `${q}|${p}`
+          walked.set(key, (walked.get(key) ?? 0) + (p < q ? 1 : 10))
+        }
+        const odd = [...walked.values()].filter(v => v !== 11).length
+        if (odd) throw new Error(`${file}: ${odd} edges are not walked exactly once each way`)
+      }
+      report.push(`${d === 2 ? "area" : "volume"} ${a.toPrecision(6)}`)
     }
   }
   const text = format(rounded(object)) + '\n'
   writeFileSync(new URL(`../docs/samples/${file}.json`, import.meta.url), text)
-  console.log(`${file.padEnd(22)} ${(text.length / 1024).toFixed(1).padStart(6)} KB  ${report.length ? `volume ${report.join(' + ')} from two points` : 'a surface: nothing to enclose'}`)
+  console.log(`${file.padEnd(22)} ${(text.length / 1024).toFixed(1).padStart(6)} KB  ${report.length ? `${report.join(' + ')} from two points` : 'a surface: nothing to enclose'}`)
 }
