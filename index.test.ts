@@ -75,6 +75,38 @@ test('can define hyper polytope', () => {
   assert.equal(polytope8.type, 'Polytope8')
 })
 
+test('can define polytopes beyond 11 dimensions', () => {
+  const polytope12: HyperGeoJSON.Polytope<12> = {
+    type: 'Polytope12',
+    coordinates: [[[[[[[[[[[[[0, 0]]]]]]]]]]]]],
+  }
+  const multiPolytope12: HyperGeoJSON.MultiPolytope<12> = {
+    type: 'MultiPolytope12',
+    coordinates: [[[[[[[[[[[[[[0, 0]]]]]]]]]]]]]],
+  }
+  assert.equal(polytope12.type, 'Polytope12')
+  assert.equal(multiPolytope12.type, 'MultiPolytope12')
+})
+
+test('rejects coordinates nested at the wrong depth', () => {
+  const polytope12: HyperGeoJSON.Polytope<12> = {
+    type: 'Polytope12',
+    // @ts-expect-error 11 levels instead of 12
+    coordinates: [[[[[[[[[[[[0, 0]]]]]]]]]]]],
+  }
+  assert.equal(polytope12.type, 'Polytope12')
+})
+
+test('rejects dimensions that are not non-negative integer literals', () => {
+  // @ts-expect-error `number` itself is not a literal dimension
+  const any: HyperGeoJSON.Polytope<number> = { type: 'Polytope4', coordinates: [] }
+  // @ts-expect-error negative dimension
+  const negative: HyperGeoJSON.Polytope<-1> = { type: 'Polytope-1', coordinates: [] }
+  // @ts-expect-error fractional dimension
+  const fractional: HyperGeoJSON.Polytope<1.5> = { type: 'Polytope1.5', coordinates: [] }
+  assert.ok(any && negative && fractional)
+})
+
 test('can define a cube', () => {
   const cube: HyperGeoJSON.Polyhedron = {
     type: 'Polyhedron',

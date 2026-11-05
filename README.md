@@ -93,3 +93,16 @@ const tesseract: HyperGeoJSON.Polychoron = {
   ],
 }
 ```
+
+### Any dimension
+
+`Polytope<N>` and `MultiPolytope<N>` accept any non-negative integer `N`. Coordinates are nested `N` levels deep (`N + 1` for `MultiPolytope`), and the type is named `Polytope${N}`. Dimensions 0 to 4 also accept their named types (`Point`, `LineString`, `Polygon`, `Polyhedron`, `Polychoron`).
+
+```typescript
+const polytope12: HyperGeoJSON.Polytope<12> = {
+  type: 'Polytope12',
+  coordinates: [[[[[[[[[[[[[0, 0]]]]]]]]]]]]],
+}
+```
+
+This relies on recursive conditional types and needs TypeScript 4.5 or later.

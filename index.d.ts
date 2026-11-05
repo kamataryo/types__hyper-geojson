@@ -23,7 +23,30 @@ export interface HyperGeoJsonObject {
   bbox?: HyperBBox | undefined,
 }
 
-export type Dimension = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+/**
+ * Dimension of a polytope: a non-negative integer literal (0, 1, 2, ...), with no upper bound.
+ * A Polytope given `number` itself, a negative number or a fraction gets `never`
+ * as its `type` and `coordinates`, so it cannot be constructed.
+ */
+export type Dimension = number
+
+/**
+ * Wraps T in N levels of arrays (`Nest<T, 0>` is T, `Nest<T, 2>` is T[][]).
+ * A union N is expanded member by member.
+ * Requires TypeScript 4.5+ (tail-recursive conditional types); works up to about 1000 levels.
+ */
+export type Nest<T, N extends Dimension> =
+  N extends number
+    ? IsNonNegativeInteger<N> extends true ? NestLoop<T, N, []> : never
+    : never
+
+type NestLoop<T, N extends number, Acc extends unknown[]> =
+  Acc['length'] extends N ? T : NestLoop<T[], N, [...Acc, unknown]>
+
+type IsNonNegativeInteger<N extends number> =
+  number extends N ? false :
+  `${N}` extends `-${string}` | `${string}.${string}` | `${string}e${string}` ? false :
+  true
 
 export type HyperGeoJSON = HyperGeometry | HyperFeature | HyperFeatureCollection
 export type HyperGeometry<N extends Dimension = 4> = GeoJSON.Geometry |
@@ -80,62 +103,47 @@ export interface MultiPolychoron extends HyperGeoJsonObject {
   coordinates: HyperPosition[][][][][],
 }
 
-export interface Polytope<N extends Dimension = 4> extends HyperGeoJsonObject {
-  type:
-    N extends 0 ? Point['type'] :
-    N extends 1 ? LineString['type'] :
-    N extends 2 ? Polygon['type'] :
-    N extends 3 ? Polyhedron['type'] :
-    N extends 4 ? Polychoron['type'] :
-    N extends 5 ? 'Polytope5' :
-    N extends 6 ? 'Polytope6' :
-    N extends 7 ? 'Polytope7' :
-    N extends 8 ? 'Polytope8' :
-    N extends 9 ? 'Polytope9' :
-    N extends 10 ? 'Polytope10' :
-    N extends 11 ? 'Polytope11' : never,
-  coordinates:
-    N extends 0 ? Point['coordinates'] :
-    N extends 1 ? LineString['coordinates'] :
-    N extends 2 ? Polygon['coordinates'] :
-    N extends 3 ? Polyhedron['coordinates'] :
-    N extends 4 ? Polychoron['coordinates'] :
-    N extends 5 ? Polychoron['coordinates'][] :
-    N extends 6 ? Polychoron['coordinates'][][] :
-    N extends 7 ? Polychoron['coordinates'][][][] :
-    N extends 8 ? Polychoron['coordinates'][][][][] :
-    N extends 9 ? Polychoron['coordinates'][][][][][] :
-    N extends 10 ? Polychoron['coordinates'][][][][][][] :
-    N extends 11 ? Polychoron['coordinates'][][][][][][][] : never,
+// Dimensions 0-4 keep their named geometry types; higher ones are named `Polytope${N}`
+interface PolytopeTypeNames {
+  0: Point['type'],
+  1: LineString['type'],
+  2: Polygon['type'],
+  3: Polyhedron['type'],
+  4: Polychoron['type'],
 }
 
+interface MultiPolytopeTypeNames {
+  0: MultiPoint['type'],
+  1: MultiLineString['type'],
+  2: MultiPolygon['type'],
+  3: MultiPolyhedron['type'],
+  4: MultiPolychoron['type'],
+}
+
+type PolytopeTypeName<N extends Dimension> =
+  N extends number
+    ? IsNonNegativeInteger<N> extends true
+      ? N extends keyof PolytopeTypeNames ? PolytopeTypeNames[N] : `Polytope${N}`
+      : never
+    : never
+
+type MultiPolytopeTypeName<N extends Dimension> =
+  N extends number
+    ? IsNonNegativeInteger<N> extends true
+      ? N extends keyof MultiPolytopeTypeNames ? MultiPolytopeTypeNames[N] : `MultiPolytope${N}`
+      : never
+    : never
+
+// An N-polytope nests positions N levels deep (Point: 0, LineString: 1, Polygon: 2, ...)
+export interface Polytope<N extends Dimension = 4> extends HyperGeoJsonObject {
+  type: PolytopeTypeName<N>,
+  coordinates: Nest<HyperPosition, N>,
+}
+
+// A collection of N-polytopes nests one level deeper
 export interface MultiPolytope<N extends Dimension = 4> extends HyperGeoJsonObject {
-  type:
-    N extends 0 ? MultiPoint['type'] :
-    N extends 1 ? MultiLineString['type'] :
-    N extends 2 ? MultiPolygon['type'] :
-    N extends 3 ? MultiPolyhedron['type'] :
-    N extends 4 ? MultiPolychoron['type'] :
-    N extends 5 ? 'MultiPolytope5' :
-    N extends 6 ? 'MultiPolytope6' :
-    N extends 7 ? 'MultiPolytope7' :
-    N extends 8 ? 'MultiPolytope8' :
-    N extends 9 ? 'MultiPolytope9' :
-    N extends 10 ? 'MultiPolytope10' :
-    N extends 11 ? 'MultiPolytope11' : never,
-  coordinates:
-  N extends 0 ? MultiPoint['coordinates'] :
-  N extends 1 ? MultiLineString['coordinates'] :
-  N extends 2 ? MultiPolygon['coordinates'] :
-  N extends 3 ? MultiPolyhedron['coordinates'] :
-  N extends 4 ? MultiPolychoron['coordinates'] :
-  N extends 5 ? MultiPolychoron['coordinates'][] :
-  N extends 6 ? MultiPolychoron['coordinates'][][] :
-  N extends 7 ? MultiPolychoron['coordinates'][][][] :
-  N extends 8 ? MultiPolychoron['coordinates'][][][][] :
-  N extends 9 ? MultiPolychoron['coordinates'][][][][][] :
-  N extends 10 ? MultiPolychoron['coordinates'][][][][][][] :
-  N extends 11 ? MultiPolychoron['coordinates'][][][][][][][] : never,
+  type: MultiPolytopeTypeName<N>,
+  coordinates: Nest<HyperPosition[], N>,
 }
 
 export interface HyperGeometryCollection<G extends HyperGeometry = HyperGeometry> extends GeoJSOnObject {
