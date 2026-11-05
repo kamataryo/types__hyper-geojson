@@ -161,13 +161,31 @@ export class Editor {
         changed()
       }
     }
+    // Tab: two spaces at the caret, or one step deeper for every line a selection touches.
+    // Shift+Tab: one step shallower for those lines. Both stay on the undo stack.
+    const indent = direction => {
+      const t = this.textarea, { value, selectionStart: a, selectionEnd: b } = t
+      const lines = value.slice(a, b).includes('\n')
+      if (direction > 0 && !lines) { insert('  '); return }
+      const start = value.lastIndexOf('\n', a - 1) + 1
+      const stop = value.indexOf('\n', b > a && value[b - 1] === '\n' ? b - 1 : b)
+      const end = stop === -1 ? value.length : stop
+      const before = value.slice(start, end).split('\n')
+      const after = before.map(line => direction > 0 ? `  ${line}` : line.replace(/^ {1,2}/, ''))
+      const text = after.join('\n')
+      if (text === value.slice(start, end)) return
+      t.setSelectionRange(start, end)
+      insert(text)
+      const first = after[0].length - before[0].length
+      t.setSelectionRange(Math.max(start, a + first), Math.max(start, b + text.length - (end - start)))
+    }
     this.textarea.addEventListener('input', changed)
     this.textarea.addEventListener('scroll', () => { if (!frame) frame = requestAnimationFrame(() => { frame = null; this.paint() }) })
     this.textarea.addEventListener('focus', () => { releaseTab = false })
     this.textarea.addEventListener('keydown', e => {
       if (e.isComposing || e.keyCode === 229) return
       if (e.key === 'Escape') { releaseTab = true; return }
-      if (e.key === 'Tab' && !e.shiftKey && !releaseTab) { e.preventDefault(); insert('  ') }
+      if (e.key === 'Tab' && !releaseTab) { e.preventDefault(); indent(e.shiftKey ? -1 : 1) }
       else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey) {
         // keep the indentation, one step deeper after an opening bracket
         const { value, selectionStart } = this.textarea

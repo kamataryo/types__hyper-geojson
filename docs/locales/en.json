@@ -1,13 +1,26 @@
 {
   "document.title": "HyperGeoJSON Viewer",
-  "lede": "Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.",
+  "lede": "TypeScript types that extend GeoJSON to any number of dimensions. The rings of a polygon become the faces of a polyhedron, then the cells of a polychoron, and so on: one level of nesting for each dimension.",
+  "viewer.intro": "Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.",
 
+  "aria.packageManager": "Package manager",
   "aria.controls": "Drawing controls",
   "aria.motion": "Motion",
   "aria.drawing": "Drawing",
   "aria.titleBlock": "Title block",
   "aria.view": "View of axes {a} and {b}",
   "aria.source": "HyperGeoJSON source",
+
+  "install.heading": "Install",
+  "install.note": "Not on npm yet, so this installs straight from GitHub. The GeoJSON types it builds on come with it.",
+  "install.copy": "Copy",
+  "install.copied": "Copied",
+  "usage.heading": "Usage",
+  "usage.intro": "Import what you need with import type. The package holds types only, so nothing is added to your code at run time.",
+  "usage.solid": "A solid is a list of faces, each a polygon turned to face outward.",
+  "usage.feature": "Features carry polyhedra, polychora and higher polytopes, and the nesting tells TypeScript how deep to look.",
+  "usage.check": "Get the nesting wrong and TypeScript tells you.",
+  "viewer.heading": "Viewer",
 
   "controls.language": "Language",
   "controls.sample": "Sample",
@@ -59,7 +72,7 @@
   "footer.drop": "Drop any HyperGeoJSON file on the page to draw it. Types and source: [kamataryo/types__hyper-geojson].",
 
   "source.heading": "Source",
-  "source.hint": "Edit the HyperGeoJSON below and the drawing follows as you type. Tab inserts two spaces; press Esc, then Tab, to leave the editor.",
+  "source.hint": "Edit the HyperGeoJSON below and the drawing follows as you type. Tab and Shift+Tab indent and outdent; press Esc, then Tab, to leave the editor.",
 
   "issues.none": "No problems found.",
   "issues.errors": { "one": "{count} error", "other": "{count} errors" },

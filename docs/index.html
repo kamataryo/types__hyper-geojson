@@ -47,7 +47,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--font-body); }
   .sheet {
-    max-width: 1180px; margin: 0 auto; display: grid; gap: 22px;
+    max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px;
     padding-block: 28px 40px;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -139,13 +139,38 @@
   .severity.error { color: var(--accent); }
   .severity.warning { color: var(--normal); }
 
+  /* the parts of the sheet: install, usage, viewer */
+  .part { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+  .part > .part-title { margin: 0; padding-top: 14px; border-top: 1.5px solid var(--ink); font: 400 0.95rem var(--font-display); letter-spacing: 0.08em; color: var(--ink); }
+  .note { margin: 0; max-width: 72ch; font-size: 0.9rem; color: var(--muted); }
+
+  .tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--rule); }
+  .tabs button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; background: none; padding: 8px 14px; font-family: var(--font-mono); color: var(--muted); }
+  .tabs button:hover { color: var(--ink); border-color: transparent; border-bottom-color: var(--rule); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .command { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; background: var(--sheet); border: 1px solid var(--rule); }
+  .command code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 0.88rem/1.6 var(--font-mono); font-variant-ligatures: none; }
+  .command .prompt { color: var(--faint); user-select: none; }
+  .command button { flex: none; }
+
+  .examples { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 4fr); gap: 18px; align-items: start; }
+  .stack { display: grid; gap: 18px; min-width: 0; }
+  .example { margin: 0; display: grid; gap: 8px; min-width: 0; }
+  .example figcaption { font: 0.9rem/1.5 var(--font-body); color: var(--ink); }
+  .listing { min-width: 0; background: var(--sheet); border: 1px solid var(--rule); }
+  .filename { padding: 6px 12px; border-bottom: 1px solid var(--rule); font: 0.72rem var(--font-mono); letter-spacing: 0.04em; color: var(--muted); }
+  .listing pre { margin: 0; padding: 12px; overflow-x: auto; font: 0.76rem/1.6 var(--font-mono); font-variant-ligatures: none; tab-size: 2; }
+  .com { color: var(--muted); font-style: italic; }
+  .kw { color: var(--accent); }
+  .type { color: var(--normal); }
+
   footer { display: grid; gap: 6px; max-width: 72ch; font-size: 0.85rem; color: var(--muted); }
   footer p { margin: 0; }
   footer a { color: var(--ink); }
   .swatch { display: inline-block; width: 0.9em; height: 2px; vertical-align: middle; margin-right: 6px; background: var(--normal); }
 
   @media (max-width: 860px) {
-    .drawing, .details { grid-template-columns: minmax(0, 1fr); }
+    .drawing, .details, .examples { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 600px) {
     .editor { --code-size: 16px; --code-line: 24px; height: 20rem; } /* 16px keeps phones from zooming into the editor */
@@ -163,8 +188,78 @@
         <button type="button" id="language-fr" data-language="fr" lang="fr">Français</button>
       </div>
     </div>
-    <p data-i18n="lede">Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.</p>
+    <p data-i18n="lede">TypeScript types that extend GeoJSON to any number of dimensions. The rings of a polygon become the faces of a polyhedron, then the cells of a polychoron, and so on: one level of nesting for each dimension.</p>
   </header>
+
+  <section class="part" aria-labelledby="install-heading">
+    <h2 class="part-title" id="install-heading" data-i18n="install.heading">Install</h2>
+    <div class="tabs" role="tablist" aria-label="Package manager" data-i18n-aria-label="aria.packageManager">
+      <button type="button" role="tab" id="pm-pnpm" data-pm="pnpm" aria-controls="install-command" aria-selected="true">pnpm</button>
+      <button type="button" role="tab" id="pm-npm" data-pm="npm" aria-controls="install-command" aria-selected="false" tabindex="-1">npm</button>
+      <button type="button" role="tab" id="pm-yarn" data-pm="yarn" aria-controls="install-command" aria-selected="false" tabindex="-1">yarn</button>
+      <button type="button" role="tab" id="pm-bun" data-pm="bun" aria-controls="install-command" aria-selected="false" tabindex="-1">bun</button>
+    </div>
+    <div class="command" id="install-command" role="tabpanel" aria-labelledby="pm-pnpm">
+      <code><span class="prompt" aria-hidden="true">$ </span><span id="install-text">pnpm add -D @types/hyper-geojson@github:kamataryo/types__hyper-geojson#main</span></code>
+      <button type="button" id="copy">Copy</button>
+    </div>
+    <p class="note" data-i18n="install.note">Not on npm yet, so this installs straight from GitHub. The GeoJSON types it builds on come with it.</p>
+  </section>
+
+  <section class="part" aria-labelledby="usage-heading">
+    <h2 class="part-title" id="usage-heading" data-i18n="usage.heading">Usage</h2>
+    <p class="note" data-i18n="usage.intro">Import what you need with import type. The package holds types only, so nothing is added to your code at run time.</p>
+    <div class="examples">
+      <figure class="example">
+        <figcaption data-i18n="usage.solid">A solid is a list of faces, each a polygon turned to face outward.</figcaption>
+        <div class="listing"><div class="filename">cube.ts</div><pre><code class="ts">import type { Polyhedron } from 'hyper-geojson'
+
+// A unit cube: six square faces, each turned to face outward
+export const cube: Polyhedron = {
+  type: 'Polyhedron',
+  coordinates: [
+    [[[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0], [0, 0, 0]]],
+    [[[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1], [0, 0, 0]]],
+    [[[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0], [0, 0, 0]]],
+    [[[1, 1, 1], [1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]]],
+    [[[1, 1, 1], [1, 1, 0], [0, 1, 0], [0, 1, 1], [1, 1, 1]]],
+    [[[1, 1, 1], [0, 1, 1], [0, 0, 1], [1, 0, 1], [1, 1, 1]]],
+  ],
+}</code></pre></div>
+      </figure>
+      <div class="stack">
+        <figure class="example">
+          <figcaption data-i18n="usage.feature">Features carry polyhedra, polychora and higher polytopes, and the nesting tells TypeScript how deep to look.</figcaption>
+          <div class="listing"><div class="filename">corners.ts</div><pre><code class="ts">import type { HyperFeature, HyperPosition, Polychoron } from 'hyper-geojson'
+
+// Every corner of a polychoron: cells, then faces, then rings, then positions
+export function corners(feature: HyperFeature&lt;Polychoron&gt;): HyperPosition[] {
+  return feature.geometry.coordinates.flat(3)
+}</code></pre></div>
+        </figure>
+        <figure class="example">
+          <figcaption data-i18n="usage.check">Get the nesting wrong and TypeScript tells you.</figcaption>
+          <div class="listing"><div class="filename">depth.ts</div><pre><code class="ts">import type { Polytope } from 'hyper-geojson'
+
+// A 5-polytope nests its positions five levels deep
+export const fine: Polytope&lt;5&gt; = {
+  type: 'Polytope5',
+  coordinates: [[[[[[0, 0, 0, 0, 0]]]]]],
+}
+
+export const tooShallow: Polytope&lt;5&gt; = {
+  type: 'Polytope5',
+  // @ts-expect-error four levels are one too few
+  coordinates: [[[[[0, 0, 0, 0, 0]]]]],
+}</code></pre></div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="viewer-heading">
+  <h2 class="part-title" id="viewer-heading" data-i18n="viewer.heading">Viewer</h2>
+  <p class="note" data-i18n="viewer.intro">Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.</p>
 
   <nav class="controls" aria-label="Drawing controls" data-i18n-aria-label="aria.controls">
     <div class="group" role="group" aria-labelledby="samples-label">
@@ -220,6 +315,7 @@
       <p id="issues-summary" aria-live="polite"></p>
       <ol id="issues"></ol>
     </div>
+  </section>
   </section>
 
   <footer>
@@ -419,6 +515,7 @@
     $('play').textContent = t(state.playing ? 'controls.pause' : 'controls.play')
     $('petrie').setAttribute('aria-label', t('petrie.title'))
     editor.textarea.setAttribute('aria-label', t('aria.source'))
+    $('copy').textContent = t(copied ? 'install.copied' : 'install.copy')
     for (const canvas of $('views').querySelectorAll('canvas')) {
       const [i, j] = canvas.dataset.axes.split(',').map(Number)
       canvas.setAttribute('aria-label', t('aria.view', { a: axisName(i), b: axisName(j) }))
@@ -559,6 +656,58 @@
   $('play').addEventListener('click', () => setPlaying(!state.playing))
   $('align').addEventListener('click', () => { state.rotation?.align(); redraw() })
   $('normals').addEventListener('change', e => { state.normals = e.target.checked; redraw() })
+
+  // ---- install ----
+
+  const MANAGERS = { pnpm: 'pnpm add -D', npm: 'npm install -D', yarn: 'yarn add -D', bun: 'bun add -d' }
+  const PACKAGE = '@types/hyper-geojson@github:kamataryo/types__hyper-geojson#main'
+  const tabs = [...document.querySelectorAll('[data-pm]')]
+  let copied = null
+  function choose(manager, focus = false) {
+    for (const tab of tabs) {
+      const on = tab.dataset.pm === manager
+      tab.setAttribute('aria-selected', on)
+      tab.tabIndex = on ? 0 : -1
+      if (on && focus) tab.focus()
+    }
+    $('install-text').textContent = `${MANAGERS[manager]} ${PACKAGE}`
+    $('install-command').setAttribute('aria-labelledby', `pm-${manager}`)
+    try { localStorage.setItem('hypergeojson.packageManager', manager) } catch {}
+  }
+  tabs.forEach((tab, k) => {
+    tab.addEventListener('click', () => choose(tab.dataset.pm))
+    tab.addEventListener('keydown', e => {
+      const to = { ArrowRight: k + 1, ArrowLeft: k - 1, Home: 0, End: tabs.length - 1 }[e.key]
+      if (to == null) return
+      e.preventDefault()
+      choose(tabs[(to + tabs.length) % tabs.length].dataset.pm, true)
+    })
+  })
+  $('copy').addEventListener('click', async () => {
+    const text = $('install-text').textContent
+    try { await navigator.clipboard.writeText(text) }
+    catch { const range = document.createRange(); range.selectNodeContents($('install-text')); getSelection().removeAllRanges(); getSelection().addRange(range); return }
+    clearTimeout(copied)
+    copied = setTimeout(() => { copied = null; renderWords() }, 1600)
+    renderWords()
+  })
+  try { const saved = localStorage.getItem('hypergeojson.packageManager'); if (saved in MANAGERS) choose(saved) } catch {}
+
+  // ---- the TypeScript examples ----
+
+  const TS = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*")|\b(import|export|from|type|const|let|function|return|interface|extends)\b|\b([A-Z]\w*)\b|(\b\d+(?:\.\d+)?\b)|([()[\]{}<>,:;.=|&?]+)/g
+  const escape = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  for (const code of document.querySelectorAll('code.ts')) {
+    const text = code.textContent
+    let html = '', last = 0
+    for (const m of text.matchAll(TS)) {
+      const [token, comment, string, keyword, type, number] = m
+      html += escape(text.slice(last, m.index)) +
+        `<span class="${comment ? 'com' : string ? 'str' : keyword ? 'kw' : type ? 'type' : number ? 'num' : 'pun'}">${escape(token)}</span>`
+      last = m.index + token.length
+    }
+    code.innerHTML = html + escape(text.slice(last))
+  }
 
   attach($('petrie'), () => state.views[0].view)
   readColors()

@@ -1,13 +1,26 @@
 {
   "document.title": "HyperGeoJSON ビューア",
-  "lede": "あらゆる次元のポリトープを、その影として描きます。小さな図は、三面図と同じく2つの軸だけを残して残りを落とした投影です。大きな図はすべての軸を等しく扱います。頂点を指すとすべての図でその頂点を追え、ドラッグすると図形が回ります。",
+  "lede": "GeoJSON をあらゆる次元に広げる TypeScript の型です。ポリゴンのリングを並べると多面体の面に、面を並べると多胞体のセルに。次元がひとつ上がるたびに、入れ子がひとつ深くなります。",
+  "viewer.intro": "あらゆる次元のポリトープを、その影として描きます。小さな図は、三面図と同じく2つの軸だけを残して残りを落とした投影です。大きな図はすべての軸を等しく扱います。頂点を指すとすべての図でその頂点を追え、ドラッグすると図形が回ります。",
 
+  "aria.packageManager": "パッケージマネージャ",
   "aria.controls": "描画の操作",
   "aria.motion": "動き",
   "aria.drawing": "図",
   "aria.titleBlock": "表題欄",
   "aria.view": "{a} 軸と {b} 軸の図",
   "aria.source": "HyperGeoJSON のソース",
+
+  "install.heading": "インストール",
+  "install.note": "まだ npm には公開していないので、GitHub から直接インストールします。土台にしている GeoJSON の型も一緒に入ります。",
+  "install.copy": "コピー",
+  "install.copied": "コピーしました",
+  "usage.heading": "使い方",
+  "usage.intro": "必要な型を import type で読み込みます。型だけのパッケージなので、実行時のコードには何も加わりません。",
+  "usage.solid": "立体は面の配列で、各面は外を向いた多角形です。",
+  "usage.feature": "Feature には多面体も多胞体もその先のポリトープも入り、入れ子の深さから TypeScript が型を追えます。",
+  "usage.check": "入れ子の深さを間違えると、TypeScript が教えてくれます。",
+  "viewer.heading": "ビューア",
 
   "controls.language": "言語",
   "controls.sample": "サンプル",
@@ -59,7 +72,7 @@
   "footer.drop": "HyperGeoJSON のファイルをページに落とすと描けます。型とソース：[kamataryo/types__hyper-geojson]",
 
   "source.heading": "ソース",
-  "source.hint": "下の HyperGeoJSON を書き換えると、図がそのまま追いかけます。Tab で空白を2つ入れます。エディタから出るには Esc のあと Tab を押します。",
+  "source.hint": "下の HyperGeoJSON を書き換えると、図がそのまま追いかけます。Tab と Shift+Tab で字下げを増減します。エディタから出るには Esc のあと Tab を押します。",
 
   "issues.none": "問題はありません。",
   "issues.errors": { "other": "エラー {count} 件" },
