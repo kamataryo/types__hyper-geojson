@@ -331,11 +331,16 @@ function boundaryVolume(solid, p0, pad) {
       }
     }
   }
-  for (const facet of solid) walk(facet, [sub(centroid(facet), p0)])
+  // a polygon in the plane is its own face: its area comes from its rings alone (GeoJSON's right-hand rule)
+  if (n === 2) walk(solid, [])
+  else for (const facet of solid) walk(facet, [sub(centroid(facet), p0)])
   let factorial = 1
   for (let k = 2; k <= n; k++) factorial *= k
   return sum / factorial
 }
+
+// The signed area of a ring in the plane: positive when it runs counterclockwise
+const ringArea = ring => ring.slice(1).reduce((s, b, k) => s + ring[k][0] * b[1] - b[0] * ring[k][1], 0) / 2
 
 // The determinant of square rows, worked out in place
 function detInPlace(m) {
@@ -418,7 +423,7 @@ export function inspect(object, limit = 50) {
 
     // every boundary of a solid faces away from it (see "Orientation" in the README)
     const multi = g.type.startsWith('Multi'), solidDepth = multi ? d - 1 : d
-    if (!closed || solidDepth !== dimension || solidDepth < 3) continue
+    if (!closed || solidDepth !== dimension || solidDepth < 2) continue
     for (const [solid, path] of multi ? g.coordinates.map((s, i) => [s, [...g.path, i]]) : [[g.coordinates, g.path]]) {
       const points = []; walk(solid, p => points.push(pad(p)))
       const centre = mean(points), radius = Math.max(...points.map(p => Math.hypot(...sub(p, centre))))
@@ -426,6 +431,9 @@ export function inspect(object, limit = 50) {
       const v = boundaryVolume(solid, centre, pad), w = boundaryVolume(solid, elsewhere, pad)
       if (Math.abs(v - w) > 1e-9 * Math.max(Math.abs(v), radius ** dimension)) issue('warning', 'twisted', path)
       else if (v < 0) issue('warning', 'inside-out', path)
+      // In GeoJSON a polygon's later rings are holes by their place, so each must run against the outer ring.
+      // (Every ring closes on itself, so the check above cannot see a hole that runs the wrong way.)
+      else if (solidDepth === 2) solid.slice(1).forEach((ring, k) => { if (ringArea(ring) > 0) issue('warning', 'hole-direction', [...path, k + 1]) })
     }
   }
   return issues
