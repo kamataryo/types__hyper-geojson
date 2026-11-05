@@ -3,8 +3,6 @@
 
 const AXIS_NAMES = ['x', 'y', 'z', 'w', 'v', 'u']
 export const axisName = k => AXIS_NAMES[k] ?? `x${k + 1}`
-export const FACET_NAMES = ['vertex', 'edge', 'face', 'cell']
-export const facetName = d => FACET_NAMES[d] ?? `${d}-face`
 
 // ---------------------------------------------------------------------------
 // Vectors
@@ -42,18 +40,19 @@ const cross = vectors => Array.from({ length: vectors.length + 1 }, (_, k) => (k
 const isPosition = a => Array.isArray(a) && typeof a[0] === 'number'
 const depthOf = a => isPosition(a) ? 0 : Array.isArray(a) && a.length ? 1 + depthOf(a[0]) : 1
 
-// The coordinates of every geometry in a HyperGeoJSON (or GeoJSON) object, with their type
-function geometries(object, out = []) {
+// Every geometry in a HyperGeoJSON (or GeoJSON) object, with its type and the path to its coordinates
+function located(object, path = [], out = []) {
   if (!object || typeof object !== 'object') return out
-  if (Array.isArray(object.features)) object.features.forEach(f => geometries(f, out))
-  else if ('geometry' in object) geometries(object.geometry, out)
-  else if (Array.isArray(object.geometries)) object.geometries.forEach(g => geometries(g, out))
-  else if (Array.isArray(object.coordinates)) {
-    const multi = String(object.type).startsWith('Multi')
-    for (const coordinates of multi ? object.coordinates : [object.coordinates]) out.push({ type: object.type, coordinates })
-  }
+  if (Array.isArray(object.features)) object.features.forEach((f, i) => located(f, [...path, 'features', i], out))
+  else if ('geometry' in object) located(object.geometry, [...path, 'geometry'], out)
+  else if (Array.isArray(object.geometries)) object.geometries.forEach((g, i) => located(g, [...path, 'geometries', i], out))
+  else if (Array.isArray(object.coordinates)) out.push({ type: String(object.type), coordinates: object.coordinates, path: [...path, 'coordinates'] })
   return out
 }
+
+// The same, with each member of a Multi* geometry on its own
+const geometries = object => located(object).flatMap(g =>
+  g.type.startsWith('Multi') ? g.coordinates.map((coordinates, i) => ({ ...g, coordinates, path: [...g.path, i] })) : [g])
 
 /**
  * Reads a HyperGeoJSON object into vertices, edges and facets.
@@ -268,4 +267,100 @@ export function vertexAt(canvas, model, rotation, view, x, y, reach = 12) {
   let best = null, bestDistance = reach
   points.forEach(([px, py], k) => { const d = Math.hypot(px - x, py - y); if (d < bestDistance) { best = k; bestDistance = d } })
   return best
+}
+
+// ---------------------------------------------------------------------------
+// Checking
+// ---------------------------------------------------------------------------
+
+const NAMED_DEPTHS = { Point: 0, LineString: 1, Polygon: 2, Polyhedron: 3, Polychoron: 4 }
+
+// How deep a geometry type nests its positions, or null when the name does not say
+function expectedDepth(type) {
+  const m = /^(Multi)?(?:(Point|LineString|Polygon|Polyhedron|Polychoron)|Polytope(\d+))$/.exec(type)
+  if (!m || (m[1] && m[3] && +m[3] <= 4)) return null // MultiPolytope1-4 are aliases whose numbering varies
+  return (m[2] ? NAMED_DEPTHS[m[2]] : +m[3]) + (m[1] ? 1 : 0)
+}
+
+// Signed volume from the boundary alone, coned from p0. When every boundary faces the same way
+// it is the same from any p0; when some face the other way, it changes with p0.
+function boundaryVolume(solid, p0, pad) {
+  const centroids = new WeakMap()
+  const centroid = a => {
+    if (!centroids.has(a)) { const ps = []; const walk = b => isPosition(b) ? ps.push(pad(b)) : b.forEach(walk); walk(a); centroids.set(a, mean(ps)) }
+    return centroids.get(a)
+  }
+  let sum = 0
+  const walk = (element, chain) => {
+    if (depthOf(element) > 2) { for (const child of element) walk(child, [...chain, centroid(child)]); return }
+    for (const ring of element) for (let k = 0; k + 1 < ring.length; k++) sum += det([...chain, pad(ring[k]), pad(ring[k + 1])].map(q => sub(q, p0)))
+  }
+  for (const facet of solid) walk(facet, [centroid(facet)])
+  let factorial = 1
+  for (let k = 2; k <= p0.length; k++) factorial *= k
+  return sum / factorial
+}
+
+/**
+ * Checks a HyperGeoJSON object. Returns issues as { severity, code, path, params },
+ * where path leads from the object to the offending part.
+ * Errors stop it from being drawn; warnings break a rule but can still be drawn.
+ */
+export function inspect(object, limit = 50) {
+  const issues = []
+  const issue = (severity, code, path, params = {}) => { if (issues.length < limit) issues.push({ severity, code, path, params }) }
+  const found = located(object)
+  if (!found.length) { issue('error', 'no-coordinates', []); return issues }
+
+  // nesting: positions are lists of numbers, and siblings nest equally deep
+  const depth = new Map()
+  const measure = (a, path) => {
+    if (!Array.isArray(a) || a.some(x => typeof x === 'number') && !a.every(x => typeof x === 'number')) { issue('error', 'not-a-position', path); return -1 }
+    if (a.length && typeof a[0] === 'number') return 0
+    const depths = a.map((b, i) => measure(b, [...path, i])).filter(d => d >= 0)
+    if (new Set(depths).size > 1) { issue('error', 'ragged', path); return -1 }
+    return depths.length ? depths[0] + 1 : -1
+  }
+  for (const g of found) {
+    const before = issues.length, d = measure(g.coordinates, g.path)
+    depth.set(g, issues.length === before ? d : -1)
+  }
+  if (issues.some(i => i.severity === 'error')) return issues
+
+  // positions agree on their dimension
+  const lengths = new Set(), walk = (a, f, path) => isPosition(a) ? f(a, path) : a.forEach((b, i) => walk(b, f, [...path, i]))
+  found.forEach(g => walk(g.coordinates, p => lengths.add(p.length), g.path))
+  const dimension = Math.max(...lengths)
+  if (lengths.size > 1) issue('warning', 'mixed-dimension', found[0].path, { dimension })
+  const pad = p => Array.from({ length: dimension }, (_, k) => p[k] ?? 0)
+
+  for (const g of found) {
+    const d = depth.get(g), expected = expectedDepth(g.type)
+    if (expected != null && d >= 0 && d !== expected) issue('warning', 'type-depth', g.path, { type: g.type, expected, found: d })
+
+    // rings close on themselves
+    let closed = true
+    const rings = (a, level, path) => {
+      if (level === 1) {
+        if (a.length < 4) { closed = false; issue('warning', 'short-ring', path, { count: a.length }) }
+        else if (a[0].some((x, k) => x !== a[a.length - 1][k]) || a[0].length !== a[a.length - 1].length) { closed = false; issue('warning', 'open-ring', path) }
+        return
+      }
+      a.forEach((b, i) => rings(b, level - 1, [...path, i]))
+    }
+    if (d >= 2) rings(g.coordinates, d, g.path)
+
+    // every boundary of a solid faces away from it (see "Orientation" in the README)
+    const multi = g.type.startsWith('Multi'), solidDepth = multi ? d - 1 : d
+    if (!closed || solidDepth !== dimension || solidDepth < 3) continue
+    for (const [solid, path] of multi ? g.coordinates.map((s, i) => [s, [...g.path, i]]) : [[g.coordinates, g.path]]) {
+      const points = []; walk(solid, p => points.push(pad(p)), [])
+      const centre = mean(points), radius = Math.max(...points.map(p => Math.hypot(...sub(p, centre))))
+      const elsewhere = centre.map((x, k) => x + radius * (0.3 + 0.17 * k))
+      const v = boundaryVolume(solid, centre, pad), w = boundaryVolume(solid, elsewhere, pad)
+      if (Math.abs(v - w) > 1e-9 * Math.max(Math.abs(v), radius ** dimension)) issue('warning', 'twisted', path)
+      else if (v < 0) issue('warning', 'inside-out', path)
+    }
+  }
+  return issues
 }

@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=B612+Mono&family=Michroma&display=swap">
 <style>
   /* Layout: a drawing sheet. The pictorial view sits beside a triangular multi-view drawing,
-     and a title block closes the sheet. Light is a whiteprint, dark is a blueprint. */
+     a title block closes the sheet, and the source sits under it. Light is a whiteprint, dark is a blueprint. */
   :root {
     --paper: #f2f5f9;
     --sheet: #ffffff;
@@ -21,19 +21,27 @@
     --muted: #55688a;
     --accent: #c4372a;
     --normal: #a5620b;
+    --code-string: #2b6a4a;
+    --wash-error: rgba(196, 55, 42, 0.12);
+    --wash-warning: rgba(165, 98, 11, 0.12);
+    --selection: rgba(28, 61, 114, 0.18);
     --font-display: "Michroma", "Eurostile", "Arial Narrow", sans-serif;
-    --font-body: "B612", "Segoe UI", system-ui, sans-serif;
-    --font-mono: "B612 Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --font-body: "B612", "Segoe UI", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+    --font-mono: "B612 Mono", ui-monospace, "SFMono-Regular", Menlo, "Noto Sans Mono CJK JP", monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
-      --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; color-scheme: dark;
+      --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; --code-string: #8fd6ad;
+      --wash-error: rgba(255, 138, 114, 0.18); --wash-warning: rgba(240, 191, 76, 0.16); --selection: rgba(228, 238, 250, 0.22);
+      color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
-    --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; color-scheme: dark;
+    --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; --code-string: #8fd6ad;
+    --wash-error: rgba(255, 138, 114, 0.18); --wash-warning: rgba(240, 191, 76, 0.16); --selection: rgba(228, 238, 250, 0.22);
+    color-scheme: dark;
   }
 
   * { box-sizing: border-box; }
@@ -45,8 +53,10 @@
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
 
+  .masthead { display: grid; gap: 8px; }
+  .masthead-row { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
   .masthead h1 { margin: 0; font: 400 clamp(1.35rem, 0.9rem + 2vw, 2rem) var(--font-display); letter-spacing: 0.05em; text-wrap: balance; }
-  .masthead p { margin: 8px 0 0; max-width: 64ch; color: var(--muted); }
+  .masthead p { margin: 0; max-width: 64ch; color: var(--muted); }
 
   .controls { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; }
   .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -57,6 +67,7 @@
   }
   button:hover, .file-button:hover { border-color: var(--ink); }
   button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+  .languages button { padding: 6px 9px; font-size: 0.8rem; }
   .plane { font-family: var(--font-mono); min-width: 2.6em; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.85rem; cursor: pointer; }
@@ -71,8 +82,8 @@
   .views { display: grid; grid-template-columns: auto repeat(var(--columns, 3), minmax(0, 1fr)); gap: 6px; }
   .axis { font: 0.8rem var(--font-mono); color: var(--muted); place-self: center; padding: 0 4px; }
 
+  h2 { margin: 0 0 8px; font: 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 22px; align-items: start; }
-  .details h2 { margin: 0 0 8px; font: 0.72rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
   .facets { display: flex; flex-wrap: wrap; gap: 6px; }
   .facets button { font-family: var(--font-mono); font-size: 0.78rem; padding: 6px 8px; }
   .readout { margin: 12px 0 0; min-height: 3em; font: 0.82rem/1.5 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -85,86 +96,200 @@
   .title-block dd { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .title-block > :nth-last-child(-n + 2) { border-bottom: 0; }
 
+  /* the source editor: a transparent textarea over a layer that colors the lines in view */
+  .source { display: grid; gap: 10px; min-width: 0; }
+  .source-head { display: grid; gap: 2px; }
+  .source-head h2 { margin: 0; }
+  .source-head p { margin: 0; max-width: 72ch; font-size: 0.85rem; color: var(--muted); }
+  .editor {
+    --code-size: 13px; --code-line: 20px;
+    display: grid; grid-template-columns: auto minmax(0, 1fr); height: 24rem;
+    background: var(--sheet); border: 1px solid var(--rule); overflow: hidden;
+    font: var(--code-size)/var(--code-line) var(--font-mono); font-variant-ligatures: none;
+  }
+  .editor:focus-within { border-color: var(--ink); }
+  .gutter { position: relative; overflow: hidden; padding-block: 10px; border-right: 1px solid var(--rule); color: var(--faint); text-align: right; user-select: none; min-width: calc(var(--digits, 2) * 1ch + 24px); }
+  .gutter-lines { padding: 0 10px 0 12px; }
+  .number.error { color: var(--accent); }
+  .number.warning { color: var(--normal); }
+  .code { position: relative; overflow: hidden; min-width: 0; }
+  .code-lines { position: absolute; top: 10px; left: 12px; min-width: calc(100% - 12px); white-space: pre; pointer-events: none; }
+  .line { height: var(--code-line); }
+  .line.error { background: var(--wash-error); }
+  .line.warning { background: var(--wash-warning); }
+  .editor textarea {
+    position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 10px 12px; border: 0; outline: none; resize: none;
+    background: transparent; color: transparent; caret-color: var(--ink); font: inherit; font-variant-ligatures: none;
+    white-space: pre; overflow: auto; tab-size: 2;
+  }
+  .editor textarea::selection { background: var(--selection); color: transparent; }
+  .key { color: var(--muted); }
+  .str { color: var(--code-string); }
+  .num { color: var(--ink); }
+  .lit { color: var(--normal); }
+  .pun { color: var(--faint); }
+  .odd { color: var(--accent); text-decoration: underline wavy; }
+  .issues { display: grid; gap: 6px; }
+  .issues p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+  .issues p.bad { color: var(--accent); }
+  .issues ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 0.85rem; }
+  .issues li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+  .issues li button { font: 0.76rem/1 var(--font-mono); padding: 5px 7px; font-variant-numeric: tabular-nums; }
+  .severity { font: 0.7rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; min-width: 6em; }
+  .severity.error { color: var(--accent); }
+  .severity.warning { color: var(--normal); }
+
   footer { display: grid; gap: 6px; max-width: 72ch; font-size: 0.85rem; color: var(--muted); }
+  footer p { margin: 0; }
   footer a { color: var(--ink); }
-  .swatch { display: inline-block; width: 0.9em; height: 2px; vertical-align: middle; margin-right: 4px; }
+  .swatch { display: inline-block; width: 0.9em; height: 2px; vertical-align: middle; margin-right: 6px; background: var(--normal); }
 
   @media (max-width: 860px) {
     .drawing, .details { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .editor { --code-size: 16px; --code-line: 24px; height: 20rem; } /* 16px keeps phones from zooming into the editor */
   }
 </style>
 </head>
 <body>
 <main class="sheet">
   <header class="masthead">
-    <h1>HyperGeoJSON</h1>
-    <p>Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.</p>
+    <div class="masthead-row">
+      <h1>HyperGeoJSON</h1>
+      <div class="group languages" role="group" aria-label="Language" data-i18n-aria-label="controls.language">
+        <button type="button" id="language-en" data-language="en" lang="en">English</button>
+        <button type="button" id="language-ja" data-language="ja" lang="ja">日本語</button>
+        <button type="button" id="language-fr" data-language="fr" lang="fr">Français</button>
+      </div>
+    </div>
+    <p data-i18n="lede">Polytopes of any dimension, drawn as their shadows. Each small view keeps two axes and drops the rest, as in a three-view drawing. The large view gives every axis an equal share. Point at a vertex to follow it through all the views, and drag to turn the object.</p>
   </header>
 
-  <nav class="controls" aria-label="Drawing controls">
+  <nav class="controls" aria-label="Drawing controls" data-i18n-aria-label="aria.controls">
     <div class="group" role="group" aria-labelledby="samples-label">
-      <span class="group-label" id="samples-label">Sample</span>
-      <button type="button" id="sample-tesseract" data-sample="tesseract">Tesseract</button>
-      <button type="button" id="sample-pentachoron" data-sample="pentachoron">5-cell</button>
-      <button type="button" id="sample-hollow-cube" data-sample="hollow-cube">Hollow cube</button>
-      <button type="button" id="sample-penteract" data-sample="penteract">Penteract</button>
-      <label class="file-button" for="file">Open file…</label>
+      <span class="group-label" id="samples-label" data-i18n="controls.sample">Sample</span>
+      <button type="button" id="sample-tesseract" data-sample="tesseract" data-i18n="sample.tesseract">Tesseract</button>
+      <button type="button" id="sample-pentachoron" data-sample="pentachoron" data-i18n="sample.pentachoron">5-cell</button>
+      <button type="button" id="sample-hollow-cube" data-sample="hollow-cube" data-i18n="sample.hollow-cube">Hollow cube</button>
+      <button type="button" id="sample-penteract" data-sample="penteract" data-i18n="sample.penteract">Penteract</button>
+      <label class="file-button" for="file" data-i18n="controls.open">Open file…</label>
       <input class="visually-hidden" type="file" id="file" accept=".json,.geojson,application/json,application/geo+json">
     </div>
-    <div class="group" role="group" aria-label="Motion">
+    <div class="group" role="group" aria-label="Motion" data-i18n-aria-label="aria.motion">
       <button type="button" id="play">Pause</button>
-      <button type="button" id="align">Align axes</button>
-      <label class="check" for="normals"><input type="checkbox" id="normals" checked> Normals</label>
+      <button type="button" id="align" data-i18n="controls.align">Align axes</button>
+      <label class="check" for="normals"><input type="checkbox" id="normals" checked> <span data-i18n="controls.normals">Normals</span></label>
     </div>
     <div class="group" role="group" aria-labelledby="planes-label">
-      <span class="group-label" id="planes-label">Turn in</span>
+      <span class="group-label" id="planes-label" data-i18n="controls.turn">Turn in</span>
       <span class="group" id="planes"></span>
     </div>
   </nav>
   <p class="status" id="status" role="status" hidden></p>
 
-  <section class="drawing" aria-label="Drawing">
+  <section class="drawing" aria-label="Drawing" data-i18n-aria-label="aria.drawing">
     <figure>
       <canvas id="petrie" role="img" aria-label="Petrie view"></canvas>
-      <figcaption><b>Petrie view</b>Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.</figcaption>
+      <figcaption><b data-i18n="petrie.title">Petrie view</b><span data-i18n="petrie.caption">Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.</span></figcaption>
     </figure>
     <figure id="multiview">
       <div class="views" id="views"></div>
-      <figcaption><b>Coordinate views</b>Views in a column share their horizontal axis, views in a row their vertical axis.</figcaption>
+      <figcaption><b data-i18n="coordinate.title">Coordinate views</b><span data-i18n="coordinate.caption">Views in a column share their horizontal axis, views in a row their vertical axis.</span></figcaption>
     </figure>
   </section>
 
   <section class="details">
-    <div>
-      <h2 id="facets-heading">Cells</h2>
+    <div id="facets-section">
+      <h2 id="facets-heading">cells</h2>
       <div class="facets" id="facets"></div>
       <p class="readout" id="readout" aria-live="polite"></p>
     </div>
-    <dl class="title-block" id="title-block" aria-label="Title block"></dl>
+    <dl class="title-block" id="title-block" aria-label="Title block" data-i18n-aria-label="aria.titleBlock"></dl>
+  </section>
+
+  <section class="source" aria-labelledby="source-heading">
+    <div class="source-head">
+      <h2 id="source-heading" data-i18n="source.heading">Source</h2>
+      <p data-i18n="source.hint">Edit the HyperGeoJSON below and the drawing follows as you type. Tab inserts two spaces; press Esc, then Tab, to leave the editor.</p>
+    </div>
+    <div id="editor"></div>
+    <div class="issues">
+      <p id="issues-summary" aria-live="polite"></p>
+      <ol id="issues"></ol>
+    </div>
   </section>
 
   <footer>
-    <p><span class="swatch" style="background: var(--normal)"></span>Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow cube. Every sample follows the <a href="https://github.com/kamataryo/types__hyper-geojson#orientation">orientation rule</a>.</p>
-    <p>Drop any HyperGeoJSON file on the page to draw it. Types and source: <a href="https://github.com/kamataryo/types__hyper-geojson">kamataryo/types__hyper-geojson</a>.</p>
+    <p><span class="swatch"></span><span data-i18n="footer.normals">Ochre ticks are normals. They show which way each boundary faces: away from the solid, and so into the void of the hollow cube. Every sample follows the <a href="https://github.com/kamataryo/types__hyper-geojson#orientation">orientation rule</a>.</span></p>
+    <p data-i18n="footer.drop">Drop any HyperGeoJSON file on the page to draw it. Types and source: <a href="https://github.com/kamataryo/types__hyper-geojson">kamataryo/types__hyper-geojson</a>.</p>
   </footer>
 </main>
 
 <script type="module">
-  import { read, planes, Rotation, coordinateView, petrieView, draw, vertexAt, axisName, facetName } from './renderer.js'
+  import { read, inspect, planes, Rotation, coordinateView, petrieView, draw, vertexAt, axisName } from './renderer.js'
+  import { Editor, parseJSON } from './editor.js'
 
   const SAMPLES = ['tesseract', 'pentachoron', 'hollow-cube', 'penteract']
+  const SAMPLE_NAMES = { 'Tesseract': 'tesseract', '5-cell': 'pentachoron', 'Hollow cube': 'hollow-cube', 'Penteract': 'penteract' }
+  const LANGUAGES = ['en', 'ja', 'fr']
   const SPEED = 0.35 // radians per second
   const $ = id => document.getElementById(id)
-  const plural = word => word === 'vertex' ? 'vertices' : `${word}s`
+  const element = (tag, props = {}, ...children) => { const e = Object.assign(document.createElement(tag), props); e.append(...children); return e }
   const format = x => Math.abs(x) < 5e-7 ? '0' : String(+x.toFixed(3))
+
+  // ---- words ----
+
+  let language = 'en', words = {}, english = {}
+  const dictionaries = {}, pluralRules = {}
+  function t(key, vars = {}) {
+    let entry = words[key] ?? english[key] ?? key
+    if (typeof entry === 'object') entry = entry[(pluralRules[language] ??= new Intl.PluralRules(language)).select(vars.count ?? 0)] ?? entry.other
+    return entry.replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m)
+  }
+  const UNITS = ['unit.vertex', 'unit.edge', 'unit.face', 'unit.cell']
+  const unit = (dimension, count) => t(UNITS[dimension] ?? 'unit.nface', { count, n: dimension })
+
+  // Fills every [data-i18n] element; [brackets] in a translation become the element's own links, in order
+  function translate() {
+    for (const el of document.querySelectorAll('[data-i18n]')) {
+      el.links ??= [...el.querySelectorAll('a')].map(a => a.cloneNode(false))
+      const parts = t(el.dataset.i18n).split(/\[(.+?)\]/)
+      el.replaceChildren(...parts.map((part, k) => k % 2
+        ? Object.assign((el.links[(k - 1) / 2] ?? document.createElement('span')).cloneNode(false), { textContent: part })
+        : document.createTextNode(part)))
+    }
+    for (const el of document.querySelectorAll('[data-i18n-aria-label]')) el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel))
+    document.title = t('document.title')
+    document.documentElement.lang = language
+  }
+
+  async function dictionary(code) {
+    if (!dictionaries[code]) { const response = await fetch(`locales/${code}.json`); if (!response.ok) throw new Error(response.status); dictionaries[code] = await response.json() }
+    return dictionaries[code]
+  }
+  async function setLanguage(code) {
+    try { english = await dictionary('en'); words = await dictionary(code); language = code } catch { return }
+    try { localStorage.setItem('hypergeojson.language', code) } catch {}
+    for (const c of LANGUAGES) $(`language-${c}`).setAttribute('aria-pressed', c === code)
+    translate()
+    renderWords()
+  }
+  function preferredLanguage() {
+    try { const saved = localStorage.getItem('hypergeojson.language'); if (LANGUAGES.includes(saved)) return saved } catch {}
+    for (const tag of navigator.languages ?? [navigator.language]) { const base = String(tag).slice(0, 2).toLowerCase(); if (LANGUAGES.includes(base)) return base }
+    return 'en'
+  }
+
+  // ---- state ----
 
   const state = {
     model: null, rotation: null, views: [], active: new Set(),
     playing: !matchMedia('(prefers-reduced-motion: reduce)').matches,
     normals: true, hoverVertex: null, hoverFacet: null, pinnedFacet: null,
+    issues: [], stale: false, sample: null,
   }
   let colors = {}
-
   function readColors() {
     const style = getComputedStyle(document.documentElement), get = name => style.getPropertyValue(name).trim()
     colors = { ink: get('--ink'), faint: get('--faint'), accent: get('--accent'), normal: get('--normal') }
@@ -197,7 +322,7 @@
   }
   function setPlaying(playing) {
     state.playing = playing
-    $('play').textContent = playing ? 'Pause' : 'Play'
+    $('play').textContent = t(playing ? 'controls.pause' : 'controls.play')
     if (playing) requestAnimationFrame(tick)
   }
 
@@ -228,21 +353,75 @@
     canvas.addEventListener('pointerleave', () => { if (!drag && state.hoverVertex != null) { state.hoverVertex = null; describe(); redraw() } })
   }
 
+  // ---- the words that depend on the model ----
+
   function describe() {
     const { model } = state, out = $('readout')
+    if (!model) return
     if (state.hoverVertex != null) {
       const k = state.hoverVertex, p = model.vertices[k]
-      out.innerHTML = `<strong>vertex ${k + 1}</strong> (${p.map(format).join(', ')})<br>${p.map((x, i) => `${axisName(i)} ${format(x)}`).join(' · ')}`
+      out.replaceChildren(element('strong', { textContent: t('readout.vertex', { index: k + 1 }) }), ` (${p.map(format).join(', ')})`,
+        element('br'), p.map((x, i) => `${axisName(i)} ${format(x)}`).join(' · '))
       return
     }
-    const f = model.facets[state.pinnedFacet ?? state.hoverFacet]
+    const k = state.pinnedFacet ?? state.hoverFacet, f = model.facets[k]
     if (f) {
-      const k = model.facets.indexOf(f)
-      out.innerHTML = `<strong>${facetName(f.dimension)} ${k + 1}</strong> ${f.vertices.length} vertices, ${f.edges.length} edges` +
-        (f.normal ? `<br>normal (${f.normal.map(format).join(', ')})` : '')
+      out.replaceChildren(element('strong', { textContent: t('facet.label', { name: unit(f.dimension, 1), index: k + 1 }) }),
+        ' ', t('readout.facet', { vertices: f.vertices.length, edges: f.edges.length }),
+        ...(f.normal ? [element('br'), t('readout.normal', { vector: f.normal.map(format).join(', ') })] : []))
       return
     }
-    out.textContent = 'Point at a vertex to follow it through every view. Point at a facet above to pick it out.'
+    out.textContent = t('readout.hint')
+  }
+
+  function renderTitleBlock() {
+    const { model } = state, n = model.dimension
+    const name = SAMPLE_NAMES[model.name] ? t(`sample.${SAMPLE_NAMES[model.name]}`) : model.name ?? t('block.untitled')
+    const shells = model.euler != null && n % 2 === 1 && model.euler > 0 ? t('block.shells', { count: model.euler / 2 }) : ''
+    const rows = [
+      ['block.object', name],
+      ['block.type', model.types.join(', ')],
+      ['block.dimension', n],
+      ['block.views', t('block.viewsValue', { count: planes(n).length })],
+      ['block.boundary', model.fVector.map((count, k) => t('block.item', { count, unit: unit(k, count) })).join(' · ')],
+      ...(model.euler != null ? [['block.euler', `${model.euler}${shells}`]] : []),
+    ]
+    $('title-block').replaceChildren(...rows.flatMap(([term, value]) => [element('dt', { textContent: t(term) }), element('dd', { textContent: value })]))
+  }
+
+  function renderFacets() {
+    const { model } = state, dims = new Set(model.facets.map(f => f.dimension))
+    $('facets-heading').textContent = dims.size === 1 ? unit([...dims][0], 2) : t('facets.mixed')
+    $('facets-section').hidden = !model.facets.length
+    for (const button of $('facets').children) {
+      const k = +button.dataset.index
+      button.textContent = t('facet.label', { name: unit(model.facets[k].dimension, 1), index: k + 1 })
+    }
+  }
+
+  function renderIssues() {
+    const { issues, stale } = state, summary = $('issues-summary')
+    const errors = issues.filter(i => i.severity === 'error').length, warnings = issues.length - errors
+    summary.className = errors ? 'bad' : ''
+    summary.textContent = !issues.length ? t('issues.none') :
+      [errors && t('issues.errors', { count: errors }), warnings && t('issues.warnings', { count: warnings })].filter(Boolean).join(t('issues.separator')) +
+      (stale ? ` ${t('issues.stale')}` : '')
+    $('issues').replaceChildren(...issues.map(issue => element('li', {},
+      element('span', { className: `severity ${issue.severity}`, textContent: t(`issues.${issue.severity}`) }),
+      element('button', { type: 'button', textContent: t('issues.location', issue), onclick: () => editor.reveal(issue.offset) }),
+      element('span', { textContent: t(issue.code, issue.params) }))))
+  }
+
+  function renderWords() {
+    $('play').textContent = t(state.playing ? 'controls.pause' : 'controls.play')
+    $('petrie').setAttribute('aria-label', t('petrie.title'))
+    editor.textarea.setAttribute('aria-label', t('aria.source'))
+    for (const canvas of $('views').querySelectorAll('canvas')) {
+      const [i, j] = canvas.dataset.axes.split(',').map(Number)
+      canvas.setAttribute('aria-label', t('aria.view', { a: axisName(i), b: axisName(j) }))
+    }
+    if (state.model) { renderFacets(); renderTitleBlock(); describe() }
+    renderIssues()
   }
 
   // ---- building the sheet for a model ----
@@ -254,15 +433,11 @@
     return [[0, n - 1], [1, 2]]
   }
 
-  function show(model) {
-    const n = model.dimension
-    Object.assign(state, { model, rotation: new Rotation(n), hoverVertex: null, hoverFacet: null, pinnedFacet: null })
+  function buildViews(n) {
+    state.rotation = new Rotation(n)
     for (const [i, j] of planes(n)) state.rotation.turn(i, j, 0.25)
     state.active = new Set(defaultPlanes(n).map(p => p.join(',')))
-
-    // the large view
-    const petrie = { canvas: $('petrie'), view: petrieView(n) }
-    state.views = [petrie]
+    state.views = [{ canvas: $('petrie'), view: petrieView(n) }]
 
     // the coordinate views, as a triangle: the view of axes (i, j) sits in column i and row j
     const grid = $('views')
@@ -270,31 +445,22 @@
     grid.style.setProperty('--columns', Math.max(1, n - 1))
     $('multiview').hidden = n < 2
     for (let j = 1; j < n; j++) {
-      const label = Object.assign(document.createElement('span'), { className: 'axis', textContent: axisName(j) })
-      label.style.gridArea = `${j} / 1`
-      grid.append(label)
+      grid.append(element('span', { className: 'axis', textContent: axisName(j), style: `grid-area: ${j} / 1` }))
       for (let i = 0; i < j; i++) {
-        const canvas = document.createElement('canvas')
+        const canvas = element('canvas', { style: `grid-area: ${j} / ${i + 2}` })
         canvas.setAttribute('role', 'img')
-        canvas.setAttribute('aria-label', `View of axes ${axisName(i)} and ${axisName(j)}`)
-        canvas.style.gridArea = `${j} / ${i + 2}`
+        canvas.dataset.axes = `${i},${j}`
         grid.append(canvas)
         const view = coordinateView(i, j)
         attach(canvas, () => view)
         state.views.push({ canvas, view })
       }
     }
-    for (let i = 0; i < n - 1; i++) {
-      const label = Object.assign(document.createElement('span'), { className: 'axis', textContent: axisName(i) })
-      label.style.gridArea = `${n} / ${i + 2}`
-      grid.append(label)
-    }
+    for (let i = 0; i < n - 1; i++) grid.append(element('span', { className: 'axis', textContent: axisName(i), style: `grid-area: ${n} / ${i + 2}` }))
 
-    // the planes to turn in
-    const chips = $('planes')
-    chips.replaceChildren(...planes(n).map(([i, j]) => {
-      const key = `${i},${j}`, button = document.createElement('button')
-      Object.assign(button, { type: 'button', className: 'plane', id: `plane-${axisName(i)}${axisName(j)}`, textContent: `${axisName(i)}${axisName(j)}` })
+    $('planes').replaceChildren(...planes(n).map(([i, j]) => {
+      const key = `${i},${j}`
+      const button = element('button', { type: 'button', className: 'plane', id: `plane-${axisName(i)}${axisName(j)}`, textContent: `${axisName(i)}${axisName(j)}` })
       button.setAttribute('aria-pressed', state.active.has(key))
       button.addEventListener('click', () => {
         state.active.has(key) ? state.active.delete(key) : state.active.add(key)
@@ -302,15 +468,13 @@
       })
       return button
     }))
+  }
 
-    // the facets
-    const dims = new Set(model.facets.map(f => f.dimension))
-    $('facets-heading').textContent = dims.size === 1 ? plural(facetName([...dims][0])) : 'Facets'
-    $('facets-heading').parentElement.hidden = !model.facets.length
-    $('facets').replaceChildren(...model.facets.map((f, k) => {
-      const button = document.createElement('button')
-      Object.assign(button, { type: 'button', id: `facet-${k + 1}`, textContent: `${facetName(f.dimension)} ${k + 1}` })
-      button.setAttribute('aria-pressed', 'false')
+  function buildFacets() {
+    $('facets').replaceChildren(...state.model.facets.map((f, k) => {
+      const button = element('button', { type: 'button', id: `facet-${k + 1}` })
+      button.dataset.index = k
+      button.setAttribute('aria-pressed', state.pinnedFacet === k)
       const enter = () => { state.hoverFacet = k; describe(); redraw() }
       const leave = () => { if (state.hoverFacet === k) state.hoverFacet = null; describe(); redraw() }
       button.addEventListener('pointerenter', enter); button.addEventListener('focus', enter)
@@ -322,52 +486,69 @@
       })
       return button
     }))
+  }
 
-    // the title block
-    const names = model.fVector.map((count, k) => `${count} ${count === 1 ? facetName(k) : plural(facetName(k))}`)
-    const shells = model.euler != null && n % 2 === 1 && model.euler > 0 ? ` (${model.euler / 2} closed shell${model.euler === 2 ? '' : 's'})` : ''
-    const rows = [
-      ['Object', model.name ?? 'Untitled'],
-      ['Type', model.types.join(', ')],
-      ['Dimension', n],
-      ['Views', `${planes(n).length} coordinate + 1 Petrie`],
-      ['Boundary', names.join(' · ')],
-      ...(model.euler != null ? [['Euler characteristic', `${model.euler}${shells}`]] : []),
-    ]
-    $('title-block').replaceChildren(...rows.flatMap(([term, value]) => [
-      Object.assign(document.createElement('dt'), { textContent: term }),
-      Object.assign(document.createElement('dd'), { textContent: value }),
-    ]))
-
-    describe()
+  // Shows a model; while editing, keeps the pose as long as the dimension stays the same
+  function show(model, { keepPose = false } = {}) {
+    const same = keepPose && state.model?.dimension === model.dimension
+    state.model = model
+    if (same) {
+      if (state.hoverVertex >= model.vertices.length) state.hoverVertex = null
+      if (state.pinnedFacet >= model.facets.length) state.pinnedFacet = null
+      state.hoverFacet = null
+    } else {
+      Object.assign(state, { hoverVertex: null, hoverFacet: null, pinnedFacet: null })
+      buildViews(model.dimension)
+    }
+    buildFacets()
+    renderWords()
     redraw()
   }
+
+  // ---- source ----
+
+  // Checks the text and draws it when it has no errors; the editor marks the lines with problems
+  function process(text, options) {
+    const parsed = parseJSON(text)
+    const issues = parsed.error
+      ? [{ ...parsed.error, severity: 'error', code: `json.${parsed.error.code}` }]
+      : inspect(parsed.value).map(issue => ({ ...issue, ...parsed.locate(issue.path), code: `check.${issue.code}` }))
+    state.issues = issues
+    state.stale = issues.some(i => i.severity === 'error')
+    if (!state.stale) show(read(parsed.value), options)
+    editor.mark(issues)
+    renderIssues()
+  }
+
+  const editor = new Editor($('editor'), { label: 'HyperGeoJSON source', onChange: text => process(text, { keepPose: true }) })
 
   // ---- loading ----
 
   function status(message) { $('status').textContent = message ?? ''; $('status').hidden = !message }
 
-  function load(object, sample = null) {
-    try { show(read(object)); status(null) } catch (error) { status(error.message); return }
+  function open(text, sample = null) {
+    state.sample = sample
     for (const name of SAMPLES) $(`sample-${name}`).setAttribute('aria-pressed', name === sample)
-    current = sample
     if (sample) try { history.replaceState(null, '', `#${sample}`) } catch {}
+    status(null)
+    editor.text = text
+    process(text, { keepPose: false })
   }
 
   async function loadSample(name) {
     try {
       const response = await fetch(`samples/${name}.json`)
-      if (!response.ok) throw new Error(`Could not load the ${name} sample (HTTP ${response.status}).`)
-      load(await response.json(), name)
+      if (!response.ok) throw new Error(t('status.sample', { name: t(`sample.${name}`), status: response.status }))
+      open(await response.text(), name)
     } catch (error) { status(error.message) }
   }
 
   async function loadFile(file) {
-    try { load(JSON.parse(await file.text())) }
-    catch (error) { status(`${file.name} could not be read as JSON: ${error.message}`) }
+    try { open(await file.text()) } catch { status(t('status.file', { file: file.name })) }
   }
 
   for (const name of SAMPLES) $(`sample-${name}`).addEventListener('click', () => loadSample(name))
+  for (const code of LANGUAGES) $(`language-${code}`).addEventListener('click', () => setLanguage(code))
   $('file').addEventListener('change', e => { const [file] = e.target.files; if (file) loadFile(file); e.target.value = '' })
   document.addEventListener('dragover', e => e.preventDefault())
   document.addEventListener('drop', e => { e.preventDefault(); const [file] = e.dataTransfer.files; if (file) loadFile(file) })
@@ -383,11 +564,12 @@
   new ResizeObserver(() => redraw()).observe(document.querySelector('.drawing'))
   document.fonts?.ready.then(() => redraw())
 
-  let current = null
   const fromHash = () => { const name = location.hash.slice(1); return SAMPLES.includes(name) ? name : null }
-  addEventListener('hashchange', () => { const name = fromHash(); if (name && name !== current) loadSample(name) })
-  loadSample(fromHash() ?? 'tesseract')
+  addEventListener('hashchange', () => { const name = fromHash(); if (name && name !== state.sample) loadSample(name) })
+
+  await setLanguage(preferredLanguage())
   setPlaying(state.playing)
+  await loadSample(fromHash() ?? 'tesseract')
 </script>
 </body>
 </html>
