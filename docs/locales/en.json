@@ -66,6 +66,8 @@
   "sample.moebius-strip": "Möbius strip",
   "sample.klein-bottle": "Klein bottle",
   "sample.klein-bottle-4d": "Klein bottle",
+  "sample.torus-4d": "4D torus",
+  "sample.chain-4d": "4D chain",
 
   "petrie.title": "Petrie view",
   "pip.back": "Back to the drawing",
