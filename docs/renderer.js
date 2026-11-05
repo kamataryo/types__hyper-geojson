@@ -141,7 +141,10 @@ export function read(object) {
   const radius = Math.max(1e-9, ...vertices.map(v => Math.hypot(...sub(v, centre))))
   const name = object?.properties?.name ?? object?.features?.[0]?.properties?.name ?? null
   const types = [...new Set(found.map(g => g.type))]
-  return { name, types, dimension, vertices, edges, facets, fVector, euler, shells, centre, radius }
+  // the edges at each vertex, so pointing at a vertex need not search every edge
+  const incident = vertices.map(() => [])
+  edges.forEach(([i, j], k) => { incident[i].push(k); incident[j].push(k) })
+  return { name, types, dimension, vertices, edges, incident, facets, fVector, euler, shells, centre, radius }
 }
 
 // ---------------------------------------------------------------------------
@@ -152,12 +155,13 @@ export const planes = n => { const out = []; for (let i = 0; i < n; i++) for (le
 
 export class Rotation {
   constructor(n) { this.n = n; this.align() }
-  align() { this.m = Array.from({ length: this.n }, (_, i) => Array.from({ length: this.n }, (_, j) => +(i === j))); this.turns = 0 }
+  align() { this.m = Array.from({ length: this.n }, (_, i) => Array.from({ length: this.n }, (_, j) => +(i === j))); this.turns = 0; this.version = (this.version ?? 0) + 1 }
   // Turns everything by `angle` within the plane of axes i and j
   turn(i, j, angle) {
     const c = Math.cos(angle), s = Math.sin(angle), m = this.m
     for (let k = 0; k < this.n; k++) { const a = m[i][k], b = m[j][k]; m[i][k] = c * a - s * b; m[j][k] = s * a + c * b }
     if (++this.turns % 500 === 0) this.orthonormalize()
+    this.version++ // tells cached positions they are out of date
   }
   orthonormalize() {
     const m = this.m
@@ -195,15 +199,27 @@ export function fit(canvas) {
 }
 
 // Where each vertex (and each facet's normal) lands in a view, in CSS pixels
+// The turned positions are the same in every view, so they are worked out once per turn and shared
+const turnedCache = new WeakMap()
+function turned(model, rotation) {
+  let c = turnedCache.get(model)
+  if (!c || c.rotation !== rotation || c.version !== rotation.version) {
+    const turn = p => rotation.apply(sub(p, model.centre))
+    c = {
+      rotation, version: rotation.version,
+      vertices: model.vertices.map(turn),
+      ticks: model.facets.filter(f => f.normal).map(f => [turn(f.centre), turn(f.centre.map((x, k) => x + f.normal[k] * model.radius * 0.22))]),
+    }
+    turnedCache.set(model, c)
+  }
+  return c
+}
+
 export function layout(model, rotation, view, width, height) {
   const scale = Math.min(width, height) / (2 * model.radius * 1.14)
-  const toScreen = p => { const [u, v] = view.project(rotation.apply(sub(p, model.centre))); return [width / 2 + u * scale, height / 2 - v * scale] }
-  const points = model.vertices.map(toScreen)
-  const ticks = model.facets.filter(f => f.normal).map(f => {
-    const tip = f.centre.map((x, k) => x + f.normal[k] * model.radius * 0.22)
-    return [toScreen(f.centre), toScreen(tip)]
-  })
-  return { points, ticks, scale }
+  const toScreen = p => { const [u, v] = view.project(p); return [width / 2 + u * scale, height / 2 - v * scale] }
+  const { vertices, ticks } = turned(model, rotation)
+  return { points: vertices.map(toScreen), ticks: ticks.map(([a, b]) => [toScreen(a), toScreen(b)]), scale }
 }
 
 /**
@@ -239,20 +255,26 @@ export function draw(canvas, model, rotation, view, state, colors) {
   stroke(model.edges.keys(), colors.ink, 1.25)
   ctx.globalAlpha = 1
 
-  if (state.normals) {
+  // dots and ticks go into one path each, so a frame asks the canvas to paint a handful of times, not once per point
+  const dots = (centres, r) => {
+    ctx.beginPath()
+    for (const [x, y] of centres) { ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 2 * Math.PI) }
+    ctx.fill()
+  }
+  if (state.normals && ticks.length) {
     ctx.strokeStyle = colors.normal; ctx.fillStyle = colors.normal; ctx.lineWidth = 1.5
-    for (const [[x0, y0], [x1, y1]] of ticks) {
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
-      ctx.beginPath(); ctx.arc(x0, y0, 1.75, 0, 2 * Math.PI); ctx.fill()
-    }
+    ctx.beginPath()
+    for (const [[x0, y0], [x1, y1]] of ticks) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1) }
+    ctx.stroke()
+    dots(ticks.map(([base]) => base), 1.75)
   }
 
   const facet = model.facets[state.highlightFacet]
   if (facet) stroke(facet.edges, colors.accent, 2.5)
-  if (hover != null) stroke(model.edges.map((e, k) => e.includes(hover) ? k : -1).filter(k => k >= 0), colors.accent, 2.5)
+  if (hover != null) stroke(model.incident[hover], colors.accent, 2.5)
 
   ctx.fillStyle = colors.ink
-  for (const [x, y] of points) { ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 2 * Math.PI); ctx.fill() }
+  dots(points, 1.6)
   if (hover != null) {
     ctx.fillStyle = colors.accent; ctx.beginPath(); ctx.arc(...points[hover], 4, 0, 2 * Math.PI); ctx.fill()
   }

@@ -48,6 +48,7 @@
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* so a class that sets display cannot show a hidden element */
   body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 var(--font-body); }
   .sheet {
     max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px;
@@ -424,34 +425,46 @@ export const tooShallow: Polytope&lt;5&gt; = {
 
   // ---- drawing ----
 
+  // Only the canvases on screen are drawn. With none in sight, nothing is drawn and the turning stops.
+  const onScreen = new Set()
+  const watcher = new IntersectionObserver(entries => {
+    for (const e of entries) e.isIntersecting ? onScreen.add(e.target) : onScreen.delete(e.target)
+    redraw()
+    wake()
+  }, { rootMargin: '64px' })
+
   let pending = false
-  function redraw() {
-    if (pending) return
-    pending = true
-    requestAnimationFrame(() => {
-      pending = false
-      const { model, rotation } = state
-      if (!model) return
-      const view = { highlightFacet: state.pinnedFacet ?? state.hoverFacet, hoverVertex: state.hoverVertex, normals: state.normals }
-      for (const { canvas, view: v } of state.views) draw(canvas, model, rotation, v, view, colors)
-      if (pip.shown) draw($('pip-canvas'), model, rotation, state.views[0].view, view, colors)
-    })
+  function paint() {
+    pending = false
+    const { model, rotation } = state
+    if (!model) return
+    const view = { highlightFacet: state.pinnedFacet ?? state.hoverFacet, hoverVertex: state.hoverVertex, normals: state.normals }
+    for (const { canvas, view: v } of state.views) if (onScreen.has(canvas)) draw(canvas, model, rotation, v, view, colors)
+    if (pip.shown && onScreen.has($('pip-canvas'))) draw($('pip-canvas'), model, rotation, state.views[0].view, view, colors)
   }
+  // Asks for one paint on the next frame, however many times it is called before then
+  function redraw() { if (!pending) { pending = true; requestAnimationFrame(paint) } }
 
   const turn = angle => { for (const key of state.active) { const [i, j] = key.split(',').map(Number); state.rotation.turn(i, j, angle) } }
 
-  let last = null
-  function tick(time) {
-    if (!state.playing) { last = null; return }
-    if (last != null) turn(Math.min(0.05, (time - last) / 1000) * SPEED)
-    last = time
-    redraw()
-    requestAnimationFrame(tick)
+  // The object turns at most 30 times a second, which is plenty for a slow turn, and only while some view is on screen.
+  // One loop at a time: it ends itself when there is nothing to show, and wake() starts it again.
+  const FRAME = 1000 / 30
+  let looping = false, last = null
+  function loop(time) {
+    if (!state.playing || !onScreen.size || document.hidden) { looping = false; last = null; return }
+    if (last == null || time - last >= FRAME - 1) {
+      if (last != null) turn(Math.min(0.1, (time - last) / 1000) * SPEED)
+      last = time
+      paint()
+    }
+    requestAnimationFrame(loop)
   }
+  function wake() { if (state.playing && onScreen.size && !document.hidden && !looping) { looping = true; requestAnimationFrame(loop) } }
   function setPlaying(playing) {
     state.playing = playing
     $('play').textContent = t(playing ? 'controls.pause' : 'controls.play')
-    if (playing) requestAnimationFrame(tick)
+    wake()
   }
 
   // ---- pointing ----
@@ -571,6 +584,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
 
     // the coordinate views, as a triangle: the view of axes (i, j) sits in column i and row j
     const grid = $('views')
+    for (const old of grid.querySelectorAll('canvas')) { watcher.unobserve(old); onScreen.delete(old) }
     grid.replaceChildren()
     grid.style.setProperty('--columns', Math.max(1, n - 1))
     $('multiview').hidden = n < 2
@@ -583,6 +597,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
         grid.append(canvas)
         const view = coordinateView(i, j)
         attach(canvas, () => view)
+        watcher.observe(canvas)
         state.views.push({ canvas, view })
       }
     }
@@ -633,7 +648,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
     buildFacets()
     renderWords()
     redraw()
-    setPip(drawing.getBoundingClientRect().bottom < 0)
+    checkPip()
   }
 
   // ---- source ----
@@ -767,13 +782,23 @@ export const tooShallow: Polytope&lt;5&gt; = {
     $('pip').hidden = !show
     redraw()
   }
-  new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting) pip.dismissed = false
-    setPip(!entry.isIntersecting && entry.boundingClientRect.bottom < 0)
-  }).observe(drawing)
+  // Checked on every scroll, at most once a frame: an observer would miss a jump straight past the drawing
+  let pipCheck = false
+  function checkPip() {
+    pipCheck = false
+    const { top, bottom } = drawing.getBoundingClientRect()
+    if (bottom > 0 && top < innerHeight) pip.dismissed = false
+    setPip(bottom < 0)
+  }
+  const schedulePipCheck = () => { if (!pipCheck) { pipCheck = true; requestAnimationFrame(checkPip) } }
+  addEventListener('scroll', schedulePipCheck, { passive: true })
+  addEventListener('resize', schedulePipCheck, { passive: true })
   $('pip-back').addEventListener('click', () => drawing.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }))
   $('pip-close').addEventListener('click', () => { pip.dismissed = true; setPip(false) })
   attach($('pip-canvas'), () => state.views[0].view)
+  watcher.observe($('pip-canvas'))
+  watcher.observe($('petrie'))
+  document.addEventListener('visibilitychange', wake)
 
   attach($('petrie'), () => state.views[0].view)
   readColors()
