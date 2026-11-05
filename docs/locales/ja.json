@@ -40,6 +40,8 @@
 
   "petrie.title": "ペトリー図",
   "petrie.caption": "すべての軸を半回転の中に均等に並べます。等角図が3つの軸を均等に並べるのと同じ考え方です。",
+  "pip.back": "図に戻る",
+  "pip.close": "小さな図を閉じる",
   "coordinate.title": "座標ビュー",
   "coordinate.caption": "同じ列の図は横軸を、同じ行の図は縦軸を共有します。",
 

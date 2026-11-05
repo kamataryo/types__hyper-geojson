@@ -40,6 +40,8 @@
 
   "petrie.title": "Petrie view",
   "petrie.caption": "Every axis is spread evenly over half a turn, the way an isometric drawing spreads three.",
+  "pip.back": "Back to the drawing",
+  "pip.close": "Close the small view",
   "coordinate.title": "Coordinate views",
   "coordinate.caption": "Views in a column share their horizontal axis, views in a row their vertical axis.",
 

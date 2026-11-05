@@ -40,6 +40,8 @@
 
   "petrie.title": "Vue de Petrie",
   "petrie.caption": "Les axes sont répartis régulièrement sur un demi-tour, comme un dessin isométrique répartit les trois siens.",
+  "pip.back": "Revenir au dessin",
+  "pip.close": "Fermer la petite vue",
   "coordinate.title": "Vues de coordonnées",
   "coordinate.caption": "Les vues d’une même colonne partagent leur axe horizontal, celles d’une même ligne leur axe vertical.",
 

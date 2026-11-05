@@ -25,6 +25,7 @@
     --wash-error: rgba(196, 55, 42, 0.12);
     --wash-warning: rgba(165, 98, 11, 0.12);
     --selection: rgba(28, 61, 114, 0.18);
+    --shadow: rgba(12, 39, 71, 0.2);
     --font-display: "Michroma", "Eurostile", "Arial Narrow", sans-serif;
     --font-body: "B612", "Segoe UI", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
     --font-mono: "B612 Mono", ui-monospace, "SFMono-Regular", Menlo, "Noto Sans Mono CJK JP", monospace;
@@ -34,6 +35,7 @@
       --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
       --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; --code-string: #8fd6ad;
       --wash-error: rgba(255, 138, 114, 0.18); --wash-warning: rgba(240, 191, 76, 0.16); --selection: rgba(228, 238, 250, 0.22);
+      --shadow: rgba(0, 0, 0, 0.45);
       color-scheme: dark;
     }
   }
@@ -41,6 +43,7 @@
     --paper: #0c2747; --sheet: #0f3259; --ink: #e4eefa; --faint: #5b7ea8; --rule: #285081;
     --muted: #a6bedb; --accent: #ff8a72; --normal: #f0bf4c; --code-string: #8fd6ad;
     --wash-error: rgba(255, 138, 114, 0.18); --wash-warning: rgba(240, 191, 76, 0.16); --selection: rgba(228, 238, 250, 0.22);
+    --shadow: rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 
@@ -163,6 +166,21 @@
   .com { color: var(--muted); font-style: italic; }
   .kw { color: var(--accent); }
   .type { color: var(--normal); }
+
+  /* the small Petrie view that follows the reader down to the editor */
+  .pip {
+    position: fixed; z-index: 20; width: min(260px, 42vw);
+    right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    display: grid; background: var(--sheet); border: 1.5px solid var(--ink); box-shadow: 0 8px 28px var(--shadow);
+  }
+  .pip-bar { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 10px; border-bottom: 1px solid var(--rule); }
+  .pip-bar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 0.68rem var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .pip-bar button { padding: 5px 8px; font: 0.8rem/1 var(--font-mono); }
+  .pip canvas { border: 0; }
+  @media (prefers-reduced-motion: no-preference) {
+    .pip { animation: pip-in 160ms ease-out; }
+    @keyframes pip-in { from { opacity: 0; transform: translateY(8px); } }
+  }
 
   footer { display: grid; gap: 6px; max-width: 72ch; font-size: 0.85rem; color: var(--muted); }
   footer p { margin: 0; }
@@ -324,6 +342,15 @@ export const tooShallow: Polytope&lt;5&gt; = {
   </footer>
 </main>
 
+<aside class="pip" id="pip" hidden aria-labelledby="pip-title">
+  <div class="pip-bar">
+    <span id="pip-title" data-i18n="petrie.title">Petrie view</span>
+    <button type="button" id="pip-back" aria-label="Back to the drawing" title="Back to the drawing" data-i18n-aria-label="pip.back" data-i18n-title="pip.back">↑</button>
+    <button type="button" id="pip-close" aria-label="Close the small view" title="Close the small view" data-i18n-aria-label="pip.close" data-i18n-title="pip.close">×</button>
+  </div>
+  <canvas id="pip-canvas" role="img" aria-label="Petrie view" data-i18n-aria-label="petrie.title"></canvas>
+</aside>
+
 <script type="module">
   import { read, inspect, planes, Rotation, coordinateView, petrieView, draw, vertexAt, axisName } from './renderer.js'
   import { Editor, parseJSON } from './editor.js'
@@ -358,6 +385,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
         : document.createTextNode(part)))
     }
     for (const el of document.querySelectorAll('[data-i18n-aria-label]')) el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel))
+    for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle)
     document.title = t('document.title')
     document.documentElement.lang = language
   }
@@ -388,6 +416,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
     issues: [], stale: false, sample: null,
   }
   let colors = {}
+  const pip = { shown: false, dismissed: false } // the small Petrie view
   function readColors() {
     const style = getComputedStyle(document.documentElement), get = name => style.getPropertyValue(name).trim()
     colors = { ink: get('--ink'), faint: get('--faint'), accent: get('--accent'), normal: get('--normal') }
@@ -405,6 +434,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
       if (!model) return
       const view = { highlightFacet: state.pinnedFacet ?? state.hoverFacet, hoverVertex: state.hoverVertex, normals: state.normals }
       for (const { canvas, view: v } of state.views) draw(canvas, model, rotation, v, view, colors)
+      if (pip.shown) draw($('pip-canvas'), model, rotation, state.views[0].view, view, colors)
     })
   }
 
@@ -603,6 +633,7 @@ export const tooShallow: Polytope&lt;5&gt; = {
     buildFacets()
     renderWords()
     redraw()
+    setPip(drawing.getBoundingClientRect().bottom < 0)
   }
 
   // ---- source ----
@@ -708,6 +739,25 @@ export const tooShallow: Polytope&lt;5&gt; = {
     }
     code.innerHTML = html + escape(text.slice(last))
   }
+
+  // ---- the small Petrie view: once the drawing has scrolled out of sight above, it follows the reader
+  // down to the editor, so every edit can be watched as it lands ----
+
+  const drawing = document.querySelector('.drawing')
+  function setPip(show) {
+    show = show && !pip.dismissed && !!state.model
+    if (show === pip.shown) return
+    pip.shown = show
+    $('pip').hidden = !show
+    redraw()
+  }
+  new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting) pip.dismissed = false
+    setPip(!entry.isIntersecting && entry.boundingClientRect.bottom < 0)
+  }).observe(drawing)
+  $('pip-back').addEventListener('click', () => drawing.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }))
+  $('pip-close').addEventListener('click', () => { pip.dismissed = true; setPip(false) })
+  attach($('pip-canvas'), () => state.views[0].view)
 
   attach($('petrie'), () => state.views[0].view)
   readColors()
