@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "",
   "types": "index.d.ts",
+  "packageManager": "pnpm@12.14.0",
   "scripts": {
     "test": "ts-node index.test.ts",
     "samples": "node scripts/build-samples.mjs",
